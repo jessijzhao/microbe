@@ -1,5 +1,5 @@
 {
-	"models": [
+	"layers": [
 	    {
 		"comparison": [
 		    ["mha", "dpmha"]
@@ -29,6 +29,6 @@
 	    }
 	],
 	"num_warmups": 20,
-	"num_runs": 1000,
-	"benchmarks": ["torch", "python", "cuda"]
+	"num_runs": 100,
+	"benchmarks": ["torch"]
 }

@@ -1,6 +1,6 @@
 import logging
 import torch
-from models import ModelFactory
+from layers import LayerFactory
 from benchmarks import BenchmarkFactory
 import json
 import torch.nn as nn
@@ -29,47 +29,47 @@ def main() -> None:
     for benchmark_type in config["benchmarks"]:
         benchmark_run = BenchmarkFactory.create(benchmark_type)
 
-        for model_set in config["models"]:
-            print(json.dumps(model_set["config"], indent=4))
+        for layer_set in config["layers"]:
+            print(json.dumps(layer_set["config"], indent=4))
 
-            for comparison in model_set["comparison"]:
+            for comparison in layer_set["comparison"]:
                 assert(len(comparison) == 2)
                 print(f"Comparing {comparison} ...")
 
                 results = pd.DataFrame(columns=["Forward only", "Forward backward"])
 
-                for model_type in comparison:
-                    # setup model
-                    model_fun = ModelFactory.create(
-                        model_type=model_type,
-                        **model_set["config"]
+                for layer_type in comparison:
+                    # setup layer
+                    layer_fun = LayerFactory.create(
+                        layer_type=layer_type,
+                        **layer_set["config"]
                     )
-                    model_fun.model.to(device)
+                    layer_fun.layer.to(device)
                     
                     # benchmark forward_only
                     with torch.no_grad():
-                        model_fun.prepare_forward_only()
+                        layer_fun.prepare_forward_only()
                         forward_only_runtime = benchmark_run.run(
-                            function=model_fun.forward_only_no_hooks,
+                            function=layer_fun.forward_only_no_hooks,
                             **conf, 
                         )
-                    logger.info(f"Runtime for {model_type} on forward_only: {forward_only_runtime} ms")
+                    logger.info(f"Runtime for {layer_type} on forward_only: {forward_only_runtime} ms")
                     
                 
                     # benchmark forward_backward
-                    model_fun.prepare_forward_backward()
+                    layer_fun.prepare_forward_backward()
                     forward_backward_runtime = benchmark_run.run(
-                        function=model_fun.forward_backward,
+                        function=layer_fun.forward_backward,
                         **conf, 
                     )
-                    logger.info(f"Runtime for {model_type} on forward_backward: {forward_backward_runtime} ms")
+                    logger.info(f"Runtime for {layer_type} on forward_backward: {forward_backward_runtime} ms")
                     
-                    del model_fun
+                    del layer_fun
 
                     results = results.append(
                         pd.Series(
                             [forward_only_runtime, forward_backward_runtime],
-                            name=model_type,
+                            name=layer_type,
                             index=results.columns
                         )
                     )

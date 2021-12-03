@@ -12,7 +12,7 @@ import torch.nn.functional as F
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class ModelType:
+class LayerType:
     RNN: str = "rnn"
     DPRNN: str = "dprnn"
     GRU: str = "gru"
@@ -22,23 +22,23 @@ class ModelType:
     MHA: str = "mha"
     DPMHA: str = "dpmha"
 
-class ModelFactory:
+class LayerFactory:
 
-    class Model:
+    class Layer:
 
         def prepare_forward_only(self):
-            self.model.eval()
+            self.layer.eval()
             self.input_tensor.requires_grad = False
 
         def prepare_forward_backward(self):
-            self.model.train()
+            self.layer.train()
             self.input_tensor.requires_grad = True
         
         def forward_only(self):
-            return self.model(*self.model_inputs)
+            return self.layer(*self.layer_inputs)
 
         def forward_only_no_hooks(self):
-            return self.model.forward(*self.model_inputs)
+            return self.layer.forward(*self.layer_inputs)
 
         def forward_backward(self) -> torch.Tensor:
             preds, _ = self.forward_only()
@@ -46,11 +46,11 @@ class ModelFactory:
             loss.backward()
 
         
-    class MHABase(Model):
+    class MHABase(Layer):
         def __init__(
             self,
             *,
-            model,
+            layer,
             batch_size,
             source_seq_len,
             targ_seq_len,
@@ -87,7 +87,7 @@ class ModelFactory:
             ) if not batch_first
             else torch.randn(batch_size, targ_seq_len, embed_dim, device=device))
 
-            self.model = model(
+            self.layer = layer(
                 embed_dim,
                 num_heads,
                 dropout=dropout,
@@ -98,22 +98,22 @@ class ModelFactory:
                 vdim=vdim
             )
 
-            self.model_inputs = [self.input_tensor, self.key, self.value]
+            self.layer_inputs = [self.input_tensor, self.key, self.value]
     
     class MHA(MHABase):
         def __init__(self, **kwargs):
-            super().__init__(model=nn.MultiheadAttention, **kwargs)
+            super().__init__(layer=nn.MultiheadAttention, **kwargs)
 
     class DPMHA(MHABase):
         def __init__(self, **kwargs):
-            super().__init__(model=DPMultiheadAttention, **kwargs)
+            super().__init__(layer=DPMultiheadAttention, **kwargs)
 
 
-    class RNNBase(Model):
+    class RNNBase(Layer):
         def __init__(
             self,
             *,
-            model,
+            layer,
             batch_size,
             seq_len,
             input_size,
@@ -140,7 +140,7 @@ class ModelFactory:
             ) if not batch_first
             else torch.randn(batch_size, seq_len, self.D * hidden_size, device=device))
 
-            self.model = model(
+            self.layer = layer(
                 input_size,
                 hidden_size,
                 num_layers=num_layers,
@@ -151,30 +151,30 @@ class ModelFactory:
                 **kwargs
             )
             
-            self.model_inputs = [self.input_tensor, self.h_0]
+            self.layer_inputs = [self.input_tensor, self.h_0]
 
 
     class RNN(RNNBase):
         def __init__(self, **kwargs):
-            super().__init__(model=nn.RNN, **kwargs)
+            super().__init__(layer=nn.RNN, **kwargs)
 
     class DPRNN(RNNBase):
         def __init__(self, **kwargs):
-            super().__init__(model=DPRNN, **kwargs)
+            super().__init__(layer=DPRNN, **kwargs)
 
     class GRU(RNNBase):
         def __init__(self, **kwargs):
-            super().__init__(model=nn.GRU, **kwargs)
+            super().__init__(layer=nn.GRU, **kwargs)
 
     class DPGRU(RNNBase):
         def __init__(self, **kwargs):
-            super().__init__(model=DPGRU, **kwargs)
+            super().__init__(layer=DPGRU, **kwargs)
 
     class LSTMBase(RNNBase):
         def __init__(
             self,
             *,
-            model,
+            layer,
             batch_size,
             seq_len,
             input_size,
@@ -187,7 +187,7 @@ class ModelFactory:
             proj_size=0
         ):
             super().__init__(
-                model=model,
+                layer=layer,
                 batch_size=batch_size,
                 seq_len=seq_len,
                 input_size=input_size,
@@ -208,36 +208,36 @@ class ModelFactory:
             ) if not batch_first
             else torch.randn(batch_size, seq_len, self.D * h_out, device=device))
             
-            self.model_inputs = [self.input_tensor, (self.h_0, self.c_0)]
+            self.layer_inputs = [self.input_tensor, (self.h_0, self.c_0)]
 
 
     class LSTM(LSTMBase):
         def __init__(self, **kwargs):
-            super().__init__(model=nn.LSTM, **kwargs)
+            super().__init__(layer=nn.LSTM, **kwargs)
 
 
     class DPLSTM(LSTMBase):
         def __init__(self, **kwargs):
-            super().__init__(model=DPLSTM, **kwargs)
+            super().__init__(layer=DPLSTM, **kwargs)
 
 
     @staticmethod
-    def create(model_type: str, **kwargs):
-        if model_type == ModelType.RNN:
-            return ModelFactory.RNN(**kwargs)
-        elif model_type == ModelType.DPRNN:
-            return ModelFactory.DPRNN(**kwargs)
-        elif model_type == ModelType.GRU:
-            return ModelFactory.GRU(**kwargs)
-        elif model_type == ModelType.DPGRU:
-            return ModelFactory.DPGRU(**kwargs)
-        elif model_type == ModelType.LSTM:
-            return ModelFactory.LSTM(**kwargs)
-        elif model_type == ModelType.DPLSTM:
-            return ModelFactory.DPLSTM(**kwargs)
-        elif model_type == ModelType.MHA:
-            return ModelFactory.MHA(**kwargs)
-        elif model_type == ModelType.DPMHA:
-            return ModelFactory.DPMHA(**kwargs)
+    def create(layer_type: str, **kwargs):
+        if layer_type == LayerType.RNN:
+            return LayerFactory.RNN(**kwargs)
+        elif layer_type == LayerType.DPRNN:
+            return LayerFactory.DPRNN(**kwargs)
+        elif layer_type == LayerType.GRU:
+            return LayerFactory.GRU(**kwargs)
+        elif layer_type == LayerType.DPGRU:
+            return LayerFactory.DPGRU(**kwargs)
+        elif layer_type == LayerType.LSTM:
+            return LayerFactory.LSTM(**kwargs)
+        elif layer_type == LayerType.DPLSTM:
+            return LayerFactory.DPLSTM(**kwargs)
+        elif layer_type == LayerType.MHA:
+            return LayerFactory.MHA(**kwargs)
+        elif layer_type == LayerType.DPMHA:
+            return LayerFactory.DPMHA(**kwargs)
         else:
-            print(f"Invalid model type: {model_type}.")
+            print(f"Invalid layer type: {layer_type}.")
