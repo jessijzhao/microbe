@@ -28,7 +28,8 @@
 		}
 	    }
 	],
-	"num_warmups": 20,
-	"num_runs": 100,
+	"num_warmups": 5,
+	"num_runs": 20,
+	"num_repeats": 100,
 	"benchmarks": ["torch"]
 }
