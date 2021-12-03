@@ -1,3 +1,4 @@
+import argparse
 import logging
 import copy
 import torch
@@ -14,18 +15,29 @@ logger.setLevel(logging.WARNING)
 
 
 def main() -> None:
+
+    # get config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--config_file",
+        dest="config_file",
+        type=str,
+        default="config.json"
+    )
+    args = parser.parse_args()
     
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    with open('config.json') as config_file:
+    logger.info(f"Using {args.config_file} as config file.")
+    with open(args.config_file) as config_file:
         config = json.load(config_file)
-
-    torch.cuda.synchronize()
 
     conf = {
         "num_warmups": config["num_warmups"],
         "num_runs": config["num_runs"],
     }
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    torch.cuda.synchronize()
 
     for benchmark_type in config["benchmarks"]:
         benchmark_run = BenchmarkFactory.create(benchmark_type)
