@@ -1,34 +1,96 @@
 {
 	"layers": [
 	    {
-		"comparison": [
-		    ["mha", "dpmha"]
-		],
-		"config": {
-		    "batch_size": 32,
-		    "source_seq_len": 100,
-		    "targ_seq_len": 50,
-		    "embed_dim": 300,
-		    "num_heads": 4
-		}
+			"comparison": [
+			    ["linear", "dplinear"]
+			],
+			"config": {
+			    "input_shape": [64, 20],
+			    "in_features": 100,
+			    "out_features": 50
+			}
 	    },
 	    {
+			"comparison": [
+			    ["conv", "dpconv"]
+			 ],
+	  		"config": {
+			    "N": 64,
+			    "in_channels": 16,
+			    "input_shape": [50, 100],
+			    "out_channels": 33,
+			    "kernel_size": 8
+			}
+	    },
+	    {
+			"comparison": [
+			    ["layernorm", "dplayernorm"]
+			],
+			"config": {
+				"N": 100,
+			    "input_shape": [32, 32, 32],
+			    "D": 3
+			}
+	    },
+	   	{
 		"comparison": [
-		    ["rnn", "dprnn"],
-		    ["gru", "dpgru"], 
-		    ["lstm", "dplstm"]
-		],
-		"config": {
-		    "batch_size": 32,
-		    "seq_len": 100,
-		    "input_size": 100,
-		    "hidden_size": 100,
-		    "num_layers": 1,
-		    "bidirectional": false
-		}
+			    ["instancenorm", "dpinstancenorm"]
+			],
+			"config": {
+			    "N": 100,
+			    "num_features": 20,
+			    "input_shape": [32, 32, 32],
+			    "affine": true
+			}
+	    },
+	    {
+			"comparison": [
+			    ["groupnorm", "dpgroupnorm"]
+			],
+			"config": {
+			    "N": 100,
+			    "input_shape": [64, 10],
+			    "num_groups": 25,
+			    "num_channels": 50
+			}
+	    },
+	    {
+			"comparison": [
+			    ["embedding", "dpembedding"]
+			],
+			"config": {
+			    "input_shape": [64, 10],
+			    "num_embeddings": 2048,
+			    "embedding_dim": 300
+			}
+	    },
+	    {
+			"comparison": [
+			    ["mha", "dpmha"]
+			],
+			"config": {
+			    "batch_size": 32,
+			    "source_seq_len": 100,
+			    "targ_seq_len": 50,
+			    "embed_dim": 300,
+			    "num_heads": 4
+			}
+	    },
+	    {
+			"comparison": [
+			    ["rnn", "dprnn"],
+			    ["gru", "dpgru"], 
+			    ["lstm", "dplstm"]
+			],
+			"config": {
+			    "batch_size": 32,
+			    "seq_len": 100,
+			    "input_size": 100,
+			    "hidden_size": 100,
+			}
 	    }
 	],
-	"num_warmups": 5,
+	"num_warmups": 10,
 	"num_runs": 20,
 	"num_repeats": 100,
 	"benchmarks": ["torch"]
