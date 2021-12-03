@@ -2,42 +2,39 @@
 	"layers": [
 	    {
 			"comparison": [
-			    ["linear", "dplinear"]
+			    ["linear", "gsm_linear"]
 			],
 			"config": {
-			    "input_shape": [64, 20],
-			    "in_features": 100,
-			    "out_features": 50
+			    "input_shape": [],
+			    "in_features": 256,
+			    "out_features": 256
 			}
 	    },
 	    {
 			"comparison": [
-			    ["conv", "dpconv"]
+			    ["conv", "gsm_conv"]
 			 ],
 	  		"config": {
-			    "N": 64,
-			    "in_channels": 16,
+			    "in_channels": 64,
 			    "input_shape": [50, 100],
-			    "out_channels": 33,
+			    "out_channels": 64,
 			    "kernel_size": 8
 			}
 	    },
 	    {
 			"comparison": [
-			    ["layernorm", "dplayernorm"]
+			    ["layernorm", "gsm_layernorm"]
 			],
 			"config": {
-				"N": 100,
-			    "input_shape": [32, 32, 32],
-			    "D": 3
+			    "input_shape": [64],
+			    "D": 1
 			}
 	    },
 	   	{
 		"comparison": [
-			    ["instancenorm", "dpinstancenorm"]
+			    ["instancenorm", "gsm_instancenorm"]
 			],
 			"config": {
-			    "N": 100,
 			    "num_features": 20,
 			    "input_shape": [32, 32, 32],
 			    "affine": true
@@ -45,10 +42,9 @@
 	    },
 	    {
 			"comparison": [
-			    ["groupnorm", "dpgroupnorm"]
+			    ["groupnorm", "gsm_groupnorm"]
 			],
 			"config": {
-			    "N": 100,
 			    "input_shape": [64, 10],
 			    "num_groups": 25,
 			    "num_channels": 50
@@ -56,7 +52,7 @@
 	    },
 	    {
 			"comparison": [
-			    ["embedding", "dpembedding"]
+			    ["embedding", "gsm_embedding"]
 			],
 			"config": {
 			    "input_shape": [32],
@@ -66,31 +62,34 @@
 	    },
 	    {
 			"comparison": [
-			    ["mha", "dpmha"]
+			    ["mha", "dpmha"],
+			    ["dpmha", "gsm_dpmha"]
 			],
 			"config": {
-			    "batch_size": 32,
-			    "source_seq_len": 100,
-			    "targ_seq_len": 50,
-			    "embed_dim": 300,
+			    "source_seq_len": 20,
+			    "targ_seq_len":10,
+			    "embed_dim": 100,
 			    "num_heads": 4
 			}
 	    },
 	    {
 			"comparison": [
 			    ["rnn", "dprnn"],
-			    ["gru", "dpgru"], 
-			    ["lstm", "dplstm"]
+			    ["dprnn", "gsm_dprnn"],
+			    ["gru", "dpgru"],
+			    ["dpgru", "gsm_dpgru"],
+			    ["lstm", "dplstm"],
+			    ["dplstm", "gsm_dplstm"]
 			],
 			"config": {
-			    "batch_size": 32,
-			    "seq_len": 100,
+			    "seq_len": 20,
 			    "input_size": 100,
 			    "hidden_size": 100
 			}
 	    }
 	],
 	"num_warmups": 10,
+	"batch_sizes": [16, 64],
 	"num_runs": 20,
 	"num_repeats": 100,
 	"benchmarks": ["torch"]
