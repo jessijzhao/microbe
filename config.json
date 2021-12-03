@@ -86,7 +86,7 @@
 			    "batch_size": 32,
 			    "seq_len": 100,
 			    "input_size": 100,
-			    "hidden_size": 100,
+			    "hidden_size": 100
 			}
 	    }
 	],
