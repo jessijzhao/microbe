@@ -47,11 +47,12 @@ def main() -> None:
                     model_fun.model.to(device)
                     
                     # benchmark forward_only
-                    model_fun.prepare_forward_only()
-                    forward_only_runtime = benchmark_run.run(
-                        function=model_fun.forward_only,
-                        **conf, 
-                    )
+                    with torch.no_grad():
+                        model_fun.prepare_forward_only()
+                        forward_only_runtime = benchmark_run.run(
+                            function=model_fun.forward_only_no_hooks,
+                            **conf, 
+                        )
                     logger.info(f"Runtime for {model_type} on forward_only: {forward_only_runtime} ms")
                     
                 

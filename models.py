@@ -34,9 +34,11 @@ class ModelFactory:
             self.model.train()
             self.input_tensor.requires_grad = True
         
-        @abstractmethod
         def forward_only(self):
-            pass
+            return self.model(*self.model_inputs)
+
+        def forward_only_no_hooks(self):
+            return self.model.forward(*self.model_inputs)
 
         def forward_backward(self) -> torch.Tensor:
             preds, _ = self.forward_only()
@@ -96,10 +98,8 @@ class ModelFactory:
                 vdim=vdim
             )
 
-
-        def forward_only(self):
-            return self.model(self.input_tensor, self.key, self.value)
-
+            self.model_inputs = [self.input_tensor, self.key, self.value]
+    
     class MHA(MHABase):
         def __init__(self, **kwargs):
             super().__init__(model=nn.MultiheadAttention, **kwargs)
@@ -150,9 +150,8 @@ class ModelFactory:
                 bidirectional=bidirectional,
                 **kwargs
             )
-
-        def forward_only(self) -> torch.Tensor:
-            return self.model(self.input_tensor, self.h_0)
+            
+            self.model_inputs = [self.input_tensor, self.h_0]
 
 
     class RNN(RNNBase):
@@ -208,9 +207,8 @@ class ModelFactory:
                 device=device
             ) if not batch_first
             else torch.randn(batch_size, seq_len, self.D * h_out, device=device))
-
-        def forward_only(self)-> torch.Tensor:
-            return self.model(self.input_tensor, (self.h_0, self.c_0))
+            
+            self.model_inputs = [self.input_tensor, (self.h_0, self.c_0)]
 
 
     class LSTM(LSTMBase):
