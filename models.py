@@ -26,20 +26,20 @@ class ModelFactory:
 
     class Model:
 
-        def prepare_inference(self):
+        def prepare_forward_only(self):
             self.model.eval()
             self.input_tensor.requires_grad = False
 
-        def prepare_training(self):
+        def prepare_forward_backward(self):
             self.model.train()
             self.input_tensor.requires_grad = True
         
         @abstractmethod
-        def inference(self):
+        def forward_only(self):
             pass
 
-        def training(self) -> torch.Tensor:
-            preds, _ = self.inference()
+        def forward_backward(self) -> torch.Tensor:
+            preds, _ = self.forward_only()
             loss = F.cross_entropy(preds, self.labels)
             loss.backward()
 
@@ -97,7 +97,7 @@ class ModelFactory:
             )
 
 
-        def inference(self):
+        def forward_only(self):
             return self.model(self.input_tensor, self.key, self.value)
 
     class MHA(MHABase):
@@ -151,7 +151,7 @@ class ModelFactory:
                 **kwargs
             )
 
-        def inference(self) -> torch.Tensor:
+        def forward_only(self) -> torch.Tensor:
             return self.model(self.input_tensor, self.h_0)
 
 
@@ -209,7 +209,7 @@ class ModelFactory:
             ) if not batch_first
             else torch.randn(batch_size, seq_len, self.D * h_out, device=device))
 
-        def inference(self)-> torch.Tensor:
+        def forward_only(self)-> torch.Tensor:
             return self.model(self.input_tensor, (self.h_0, self.c_0))
 
 

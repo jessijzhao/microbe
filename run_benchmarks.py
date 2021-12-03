@@ -36,7 +36,7 @@ def main() -> None:
                 assert(len(comparison) == 2)
                 print(f"Comparing {comparison} ...")
 
-                results = pd.DataFrame(columns=["Inference", "Training"])
+                results = pd.DataFrame(columns=["Forward only", "Forward backward"])
 
                 for model_type in comparison:
                     # setup model
@@ -46,34 +46,34 @@ def main() -> None:
                     )
                     model_fun.model.to(device)
                     
-                    # benchmark inference
-                    model_fun.prepare_inference()
-                    inf_runtime = benchmark_run.run(
-                        function=model_fun.inference,
+                    # benchmark forward_only
+                    model_fun.prepare_forward_only()
+                    forward_only_runtime = benchmark_run.run(
+                        function=model_fun.forward_only,
                         **conf, 
                     )
-                    logger.info(f"Runtime for {model_type} on inference: {inf_runtime} ms")
+                    logger.info(f"Runtime for {model_type} on forward_only: {forward_only_runtime} ms")
                     
                 
-                    # benchmark training
-                    model_fun.prepare_training()
-                    train_runtime = benchmark_run.run(
-                        function=model_fun.training,
+                    # benchmark forward_backward
+                    model_fun.prepare_forward_backward()
+                    forward_backward_runtime = benchmark_run.run(
+                        function=model_fun.forward_backward,
                         **conf, 
                     )
-                    logger.info(f"Runtime for {model_type} on training: {train_runtime} ms")
+                    logger.info(f"Runtime for {model_type} on forward_backward: {forward_backward_runtime} ms")
                     
                     del model_fun
 
                     results = results.append(
                         pd.Series(
-                            [inf_runtime, train_runtime],
+                            [forward_only_runtime, forward_backward_runtime],
                             name=model_type,
                             index=results.columns
                         )
                     )
                  
-                results["Factor"] = results["Training"] / results["Inference"]
+                results["Factor"] = results["Forward only"] / results["Forward backward"]
                 results = results.append(
                     pd.Series(
                         (
