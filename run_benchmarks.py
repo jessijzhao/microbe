@@ -82,6 +82,7 @@ def main() -> None:
                         logger.info(f"Runtime for {layer_type} on forward_backward: {forward_backward_runtime} ms")
                         
                         del layer_fun
+                        torch.cuda.empty_cache() 
                         runtimes.append((forward_only_runtime, forward_backward_runtime))
 
                     runtimes = np.array(runtimes)
@@ -104,7 +105,7 @@ def main() -> None:
                         )
                     )
                  
-                results["Factor"] = results["Forward only"] / results["Forward backward"]
+                results["Factor"] = results["Forward backward"] / results["Forward only"]
                 results = results.append(
                     pd.Series(
                         (

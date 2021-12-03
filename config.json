@@ -59,9 +59,9 @@
 			    ["embedding", "dpembedding"]
 			],
 			"config": {
-			    "input_shape": [64, 10],
-			    "num_embeddings": 2048,
-			    "embedding_dim": 300
+			    "input_shape": [32],
+			    "num_embeddings": 1024,
+			    "embedding_dim": 100
 			}
 	    },
 	    {
