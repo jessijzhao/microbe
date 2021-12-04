@@ -55,9 +55,9 @@
 			    ["embedding", "gsm_embedding"]
 			],
 			"config": {
-			    "input_shape": [32],
+			    "input_shape": [],
 			    "num_embeddings": 1024,
-			    "embedding_dim": 100
+			    "embedding_dim": 300
 			}
 	    },
 	    {
@@ -92,5 +92,5 @@
 	"batch_sizes": [16, 64],
 	"num_runs": 20,
 	"num_repeats": 100,
-	"benchmarks": ["torch"]
+	"benchmark": "torch"
 }

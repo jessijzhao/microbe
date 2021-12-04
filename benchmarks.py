@@ -5,6 +5,8 @@ import torch.utils.benchmark as benchmark
 from abc import abstractmethod
 
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class BenchmarkType:
     PYTHON: str = "python"
     CUDA: str = "cuda"
@@ -14,9 +16,24 @@ class BenchmarkType:
 class BenchmarkFactory:
 
     class Benchmark:
+        
+        def run(self, **kwargs):
+
+            # clean up memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.reset_peak_memory_stats(device)
+            
+            runtime = self.get_runtime(**kwargs)
+            
+            # get memory
+            if torch.cuda.is_available():
+                max_memory = torch.cuda.max_memory_allocated(device) * 1e-9
+
+            return runtime, max_memory
 
         @abstractmethod
-        def run(self):
+        def get_runtime(self, **kwargs):
             pass
 
     class CustomBenchmark(Benchmark):
@@ -29,10 +46,10 @@ class BenchmarkFactory:
         def end_timer(self):
             pass    
 
-        def run(self, function, num_warmups, num_runs):
+        def get_runtime(self, function, num_warmups, num_runs):
             for _ in range(num_warmups):
                 _ = function()
-
+            
             torch.cuda.synchronize()
 
             self.start_timer()
@@ -61,15 +78,14 @@ class BenchmarkFactory:
             torch.cuda.synchronize()
             return self.start_event.elapsed_time(self.end_event)
 
-        def run(self, function, num_warmups, num_runs):
+        def get_runtime(self, function, num_warmups, num_runs):
             if torch.cuda.is_available():
-                return super().run(function, num_warmups, num_runs)
+                return super().get_runtime(function, num_warmups, num_runs)
             else:
                 print("CUDA not available, skipping CUDA benchmark ...")
 
     class Torch(Benchmark):
-        def run(self, function, num_runs, **kwargs):
-            
+        def get_runtime(self, function, num_runs, **kwargs):
             # benchmark.Timer performs own warmups
             timer = benchmark.Timer(
                 stmt="function()",
