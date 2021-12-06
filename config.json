@@ -89,7 +89,7 @@
 	    }
 	],
 	"num_warmups": 10,
-	"batch_sizes": [16, 64],
+	"batch_sizes": [16, 32, 64, 128, 256, 512],
 	"num_runs": 20,
 	"num_repeats": 100,
 	"benchmark": "torch"

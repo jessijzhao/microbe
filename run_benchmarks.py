@@ -90,34 +90,45 @@ def main() -> None:
                             **layer_set["config"]
                         )
 
-                        # benchmark forward_only
-                        with torch.no_grad():
-                            layer_fun.prepare_forward_only()
-                            forward_only_runtime, forward_only_memory= benchmark_run.run(
-                                function=layer_fun.forward_only_no_hooks,
-                                **conf, 
-                            )
-                        logger.info(f"Runtime for {layer_type} on forward_only: {forward_only_runtime} ms")
-                        del layer_fun
-                        torch.cuda.empty_cache() 
+                        try:
+                            # benchmark forward_only
+                            with torch.no_grad():
+                                layer_fun.prepare_forward_only()
+                                forward_only_runtime, forward_only_memory= benchmark_run.run(
+                                    function=layer_fun.forward_only_no_hooks,
+                                    **conf, 
+                                )
+                            logger.info(f"Runtime for {layer_type} on forward_only: {forward_only_runtime} ms")
+                            del layer_fun
+                            torch.cuda.empty_cache() 
+                        except RuntimeError:
+                            logger.debug(f"{layer_type}, forward_only, batch_size={batch_size} failed")
+                            forward_only_runtime = float('nan')
+                            forward_only_memory = float('nan')
 
-                       # setup layer
+                        # setup layer
                         layer_fun = LayerFactory.create(
                             layer_type=layer_type,
                             batch_size=batch_size,
                             **layer_set["config"]
                         )
                        
-                        # benchmark forward_backward
-                        layer_fun.prepare_forward_backward()
-                        forward_backward_runtime, forward_backward_memory = benchmark_run.run(
-                            function=layer_fun.forward_backward,
-                            **conf, 
-                        )
-                        logger.info(f"Runtime for {layer_type} on forward_backward: {forward_backward_runtime} ms")
-                        
-                        del layer_fun
-                        torch.cuda.empty_cache() 
+                        try:
+                            # benchmark forward_backward
+                            layer_fun.prepare_forward_backward()
+                            forward_backward_runtime, forward_backward_memory = benchmark_run.run(
+                                function=layer_fun.forward_backward,
+                                **conf, 
+                            )
+                            logger.info(f"Runtime for {layer_type} on forward_backward: {forward_backward_runtime} ms")
+                            del layer_fun
+                            torch.cuda.empty_cache() 
+
+                        except RuntimeError:
+                            logger.debug(f"{layer_type}, forward_only, batch_size={batch_size} failed")
+                            forward_backward_runtime = float('nan')
+                            forward_backward_memory = float('nan')
+
                         runtimes.append((forward_only_runtime, forward_backward_runtime))
                         memory.append((forward_only_memory, forward_backward_memory))
 
