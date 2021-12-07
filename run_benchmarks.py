@@ -19,7 +19,7 @@ def save_results(layer_name, batch_size, config, runtimes, memory):
         'layer_name': layer_name,
         'batch_size': batch_size,
         'config': config,
-        'runtimes': runtimes,
+        'runtime': runtimes,
         'memory': memory
     }
     pickle_name = f"{layer_name}_bs_{batch_size}_runs_{config['num_repeats']}_repeats_{config['num_runs']}"
