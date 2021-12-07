@@ -1,9 +1,7 @@
 {
 	"layers": [
 	    {
-			"comparison": [
-			    ["linear", "gsm_linear"]
-			],
+			"comparison": ["linear", "gsm_linear"],
 			"config": {
 			    "input_shape": [],
 			    "in_features": 512,
@@ -11,9 +9,7 @@
 			}
 	    },
 	    {
-			"comparison": [
-			    ["conv", "gsm_conv"]
-			 ],
+			"comparison": ["conv", "gsm_conv"],
 	  		"config": {
 			    "in_channels": 64,
 			    "input_shape": [50, 100],
@@ -22,18 +18,14 @@
 			}
 	    },
 	    {
-			"comparison": [
-			    ["layernorm", "gsm_layernorm"]
-			],
+			"comparison": ["layernorm", "gsm_layernorm"],
 			"config": {
-			    "input_shape": [],
+			    "input_shape": [64],
 			    "D": 1
 			}
 	    },
-	   	{
-		"comparison": [
-			    ["instancenorm", "gsm_instancenorm"]
-			],
+	    {
+			"comparison": ["instancenorm", "gsm_instancenorm"],
 			"config": {
 			    "num_features": 256,
 			    "input_shape": [64],
@@ -41,9 +33,7 @@
 			}
 	    },
 	    {
-			"comparison": [
-			    ["groupnorm", "gsm_groupnorm"]
-			],
+			"comparison": ["groupnorm", "gsm_groupnorm"],
 			"config": {
 			    "input_shape": [],
 			    "num_groups": 16,
@@ -51,9 +41,7 @@
 			}
 	    },
 	    {
-			"comparison": [
-			    ["embedding", "gsm_embedding"]
-			],
+			"comparison": ["embedding", "gsm_embedding"],
 			"config": {
 			    "input_shape": [],
 			    "num_embeddings": 20000,
@@ -61,10 +49,7 @@
 			}
 	    },
 	    {
-			"comparison": [
-			    ["mha", "dpmha"],
-			    ["dpmha", "gsm_dpmha"]
-			],
+			"comparison": ["mha", "dpmha", "gsm_dpmha"],
 			"config": {
 			    "source_seq_len": 128,
 			    "targ_seq_len": 64,
@@ -74,12 +59,9 @@
 	    },
 	    {
 			"comparison": [
-			    ["rnn", "dprnn"],
-			    ["dprnn", "gsm_dprnn"],
-			    ["gru", "dpgru"],
-			    ["dpgru", "gsm_dpgru"],
-			    ["lstm", "dplstm"],
-			    ["dplstm", "gsm_dplstm"]
+			    "rnn", "dprnn", "gsm_dprnn",
+			    "gru", "dpgru", "gsm_dpgru",
+			    "lstm", "dplstm", "gsm_dplstm"
 			],
 			"config": {
 			    "seq_len": 128,
@@ -90,7 +72,7 @@
 	],
 	"num_warmups": 10,
 	"batch_sizes": [16, 32, 64, 128, 256, 512],
-	"num_runs": 20,
-	"num_repeats": 100,
+	"num_repeats": 20,
+	"num_runs": 100,
 	"benchmark": "torch"
 }

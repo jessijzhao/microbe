@@ -46,17 +46,17 @@ class BenchmarkFactory:
         def end_timer(self):
             pass    
 
-        def get_runtime(self, function, num_warmups, num_runs):
+        def get_runtime(self, function, num_warmups, num_repeats):
             for _ in range(num_warmups):
                 _ = function()
             
             torch.cuda.synchronize()
 
             self.start_timer()
-            for _ in range(num_runs):
+            for _ in range(num_repeats):
                 _ = function()
 
-            return self.end_timer() /  num_runs
+            return self.end_timer() /  num_repeats
 
     class Python(CustomBenchmark):
         def start_timer(self):
@@ -78,14 +78,14 @@ class BenchmarkFactory:
             torch.cuda.synchronize()
             return self.start_event.elapsed_time(self.end_event)
 
-        def get_runtime(self, function, num_warmups, num_runs):
+        def get_runtime(self, function, num_warmups, num_repeats):
             if torch.cuda.is_available():
-                return super().get_runtime(function, num_warmups, num_runs)
+                return super().get_runtime(function, num_warmups, num_repeats)
             else:
                 print("CUDA not available, skipping CUDA benchmark ...")
 
     class Torch(Benchmark):
-        def get_runtime(self, function, num_runs, **kwargs):
+        def get_runtime(self, function, num_repeats, **kwargs):
             # benchmark.Timer performs own warmups
             timer = benchmark.Timer(
                 stmt="function()",
@@ -93,7 +93,7 @@ class BenchmarkFactory:
                 num_threads=1
             )
 
-            return timer.timeit(num_runs).mean * 1000
+            return timer.timeit(num_repeats).mean * 1000
 
     @staticmethod
     def create(benchmark_type: str):

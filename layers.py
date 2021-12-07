@@ -67,6 +67,7 @@ class LayerFactory:
             loss = self.criterion(preds, self.labels)
             loss.backward()
 
+
     class LinearBase(Layer):
         def __init__(
             self,
@@ -107,11 +108,11 @@ class LayerFactory:
             super().__init__()
             D = len(input_shape)
             if D == 1:
-                self.layer_type = nn.Conv1d
+                self.layer_name = nn.Conv1d
             elif D ==2:
-                self.layer_type = nn.Conv2d
+                self.layer_name = nn.Conv2d
             elif D == 3:
-                self.layer_type = nn.Conv3d
+                self.layer_name = nn.Conv3d
             else:
                 raise Exception("Input shape must be between 1 and 3 long")
 
@@ -119,7 +120,7 @@ class LayerFactory:
                 batch_size, in_channels, *input_shape, device=device
             )
             self.layer_inputs = [self.input_tensor]
-            self.layer = self.layer_type(
+            self.layer = self.layer_name(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
@@ -169,17 +170,17 @@ class LayerFactory:
             super().__init__()
             D = len(input_shape)
             if D == 1:
-                self.layer_type = nn.InstanceNorm1d
+                self.layer_name = nn.InstanceNorm1d
             elif D ==2:
-                self.layer_type = nn.InstanceNorm2d
+                self.layer_name = nn.InstanceNorm2d
             elif D == 3:
-                self.layer_type = nn.InstanceNorm3d
+                self.layer_name = nn.InstanceNorm3d
             else:
                 raise Exception("Input shape must be between 1 and 3 long")
 
             self.input_tensor = torch.randn(batch_size, num_features, *input_shape, device=device)
             self.layer_inputs = [self.input_tensor]
-            self.layer = self.layer_type(
+            self.layer = self.layer_name(
                 num_features=num_features,
                 eps=eps,
                 affine=affine,
@@ -418,74 +419,74 @@ class LayerFactory:
 
 
     @staticmethod
-    def create(layer_type: str, **kwargs):
-        if layer_type == LayerType.LINEAR:
+    def create(layer_name: str, **kwargs):
+        if layer_name == LayerType.LINEAR:
             return LayerFactory.LinearBase(**kwargs)
-        elif layer_type == LayerType.GSM_LINEAR:
+        elif layer_name == LayerType.GSM_LINEAR:
             return LayerFactory.make_private(
                 LayerFactory.LinearBase(**kwargs)
             )
-        if layer_type == LayerType.CONV:
+        if layer_name == LayerType.CONV:
             return LayerFactory.ConvBase(**kwargs)
-        elif layer_type == LayerType.GSM_CONV:
+        elif layer_name == LayerType.GSM_CONV:
             return LayerFactory.make_private(
                 LayerFactory.ConvBase(**kwargs)
             )
-        if layer_type == LayerType.LAYERNORM:
+        if layer_name == LayerType.LAYERNORM:
             return LayerFactory.LayerNormBase(**kwargs)
-        elif layer_type == LayerType.GSM_LAYERNORM:
+        elif layer_name == LayerType.GSM_LAYERNORM:
             return LayerFactory.make_private(
                 LayerFactory.LayerNormBase(**kwargs)
             )
-        if layer_type == LayerType.INSTANCENORM:
+        if layer_name == LayerType.INSTANCENORM:
             return LayerFactory.InstanceNormBase(**kwargs)
-        elif layer_type == LayerType.GSM_INSTANCENORM:
+        elif layer_name == LayerType.GSM_INSTANCENORM:
             return LayerFactory.make_private(
                 LayerFactory.InstanceNormBase(**kwargs)
             )
-        if layer_type == LayerType.GROUPNORM:
+        if layer_name == LayerType.GROUPNORM:
             return LayerFactory.GroupNormBase(**kwargs)
-        elif layer_type == LayerType.GSM_GROUPNORM:
+        elif layer_name == LayerType.GSM_GROUPNORM:
             return LayerFactory.make_private(
                 LayerFactory.GroupNormBase(**kwargs)
             )
-        elif layer_type == LayerType.EMBEDDING:
+        elif layer_name == LayerType.EMBEDDING:
             return LayerFactory.EmbeddingBase(**kwargs)
-        elif layer_type == LayerType.GSM_EMBEDDING:
+        elif layer_name == LayerType.GSM_EMBEDDING:
             return LayerFactory.make_private(
                 LayerFactory.EmbeddingBase(**kwargs)
             )
-        elif layer_type == LayerType.RNN:
+        elif layer_name == LayerType.RNN:
             return LayerFactory.RNNBase(layer=nn.RNN, **kwargs)
-        elif layer_type == LayerType.DPRNN:
+        elif layer_name == LayerType.DPRNN:
             return LayerFactory.RNNBase(layer=DPRNN, **kwargs)
-        elif layer_type == LayerType.GSM_DPRNN:
+        elif layer_name == LayerType.GSM_DPRNN:
             return LayerFactory.make_private(
                 LayerFactory.RNNBase(layer=DPRNN, **kwargs)
             )
-        elif layer_type == LayerType.GRU:
+        elif layer_name == LayerType.GRU:
             return LayerFactory.RNNBase(layer=nn.GRU, **kwargs)
-        elif layer_type == LayerType.DPGRU:
+        elif layer_name == LayerType.DPGRU:
             return LayerFactory.RNNBase(layer=DPGRU, **kwargs)
-        elif layer_type == LayerType.GSM_DPGRU:
+        elif layer_name == LayerType.GSM_DPGRU:
             return LayerFactory.make_private(
                 LayerFactory.RNNBase(layer=DPGRU, **kwargs)
         )
-        elif layer_type == LayerType.LSTM:
+        elif layer_name == LayerType.LSTM:
             return LayerFactory.LSTMBase(layer=nn.LSTM, **kwargs)
-        elif layer_type == LayerType.DPLSTM:
+        elif layer_name == LayerType.DPLSTM:
             return LayerFactory.LSTMBase(layer=DPLSTM, **kwargs)
-        elif layer_type == LayerType.GSM_DPLSTM:
+        elif layer_name == LayerType.GSM_DPLSTM:
             return LayerFactory.make_private(
                 LayerFactory.LSTMBase(layer=DPLSTM, **kwargs)
             )
-        elif layer_type == LayerType.MHA:
+        elif layer_name == LayerType.MHA:
             return LayerFactory.MHABase(layer=nn.MultiheadAttention, **kwargs)
-        elif layer_type == LayerType.DPMHA:
+        elif layer_name == LayerType.DPMHA:
             return LayerFactory.MHABase(layer=DPMultiheadAttention, **kwargs)
-        elif layer_type == LayerType.GSM_DPMHA:
+        elif layer_name == LayerType.GSM_DPMHA:
             return LayerFactory.make_private(
                 LayerFactory.MHABase(layer=DPMultiheadAttention, **kwargs)
             )
         else:
-            print(f"Invalid layer type: {layer_type}.")
+            print(f"Invalid layer type: {layer_name}.")
