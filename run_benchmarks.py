@@ -23,7 +23,7 @@ def save_results(layer_name, batch_size, config, runtimes, memory):
         'layer_name': layer_name,
         'batch_size': batch_size,
         'config': config,
-        'runtimes': runtimes,
+        'runtime': runtimes,
         'memory': memory
     }
     path = get_path(layer_name, batch_size, config)
@@ -125,11 +125,9 @@ def main() -> None:
                         torch.cuda.empty_cache()
                         
                         runtimes.append(runtime)
-                        memory.append(max_memory-base_mem)
+                        memory.append((base_mem, max_memory))
+                        logger.debug(f"Runtime: {runtime}, base memory: {base_mem}, max memory: {max_memory}")
 
-                        logger.debug(f"Runtime: {runtime}, Memory: {max_memory}")
-
-                    logger.debug(f"Mean runtime: {np.mean(runtimes)}, Mean memory: {np.mean(memory)}")
                     if not args.no_save:
                         save_results(
                             layer_name=layer_name,
