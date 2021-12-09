@@ -66,7 +66,7 @@ class LayerFactory:
             preds = self.forward_only()
             loss = self.criterion(preds, self.labels)
             loss.backward()
-
+            self.layer.zero_grad()
 
     class LinearBase(Layer):
         def __init__(
@@ -247,10 +247,8 @@ class LayerFactory:
             self.labels = torch.randn(batch_size, *input_shape, embedding_dim, device=device)
     
     class CLayer(Layer):
-        def forward_backward(self) -> torch.Tensor:
-            preds, _ = self.forward_only()
-            loss = F.cross_entropy(preds, self.labels)
-            loss.backward()
+        def forward_only(self):
+            return self.layer(*self.layer_inputs)[0]
 
     class MHABase(CLayer):
         def __init__(
@@ -310,8 +308,7 @@ class LayerFactory:
                     targ_seq_len, batch_size, embed_dim, device=device
                 ) if not batch_first
                 else torch.randn(batch_size, targ_seq_len, embed_dim, device=device)
-            )            
-    
+            )
 
     class RNNBase(CLayer):
         def __init__(
@@ -365,7 +362,7 @@ class LayerFactory:
                     batch_size, seq_len, self.D * hidden_size, device=device
                 )
             )
-
+        
 
     class LSTMBase(RNNBase):
         def __init__(
@@ -411,6 +408,7 @@ class LayerFactory:
                 ) if not batch_first
                 else torch.randn(batch_size, seq_len, self.D * h_out, device=device)
             )
+
             
 
     def make_private(layer: Layer) -> Layer:
