@@ -1,15 +1,11 @@
 import argparse
+import json
 import logging
-import copy
 import torch
 import pickle
-from layers import LayerType, LayerFactory
 from benchmarks import BenchmarkFactory
+from layers import LayerType, LayerFactory
 from os.path import exists
-import json
-import torch.nn as nn
-import pandas as pd
-import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -99,7 +95,6 @@ def main() -> None:
                     for _ in range(args.num_runs):
                         torch.cuda.empty_cache()
                         base_mem = torch.cuda.memory_allocated(device) * 1e-9
-                        print('Base memory:', base_mem)
 
                         # setup layer
                         layer_fun = LayerFactory.create(
@@ -126,7 +121,7 @@ def main() -> None:
                         
                         runtimes.append(runtime)
                         memory.append((base_mem, max_memory))
-                        logger.debug(f"Runtime: {runtime}, base memory: {base_mem}, max memory: {max_memory}")
+                        logger.debug(f"Runtime: {runtime:.3f}, base memory: {base_mem:.6f}, max memory: {max_memory:.4f}")
 
                     if not args.no_save:
                         save_results(
