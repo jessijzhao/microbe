@@ -28,7 +28,12 @@ def main(args) -> None:
         batch_size=args.batch_size,
         **config[layer_set]
     )
-    layer_fun.prepare_forward_backward()
+    if not args.forward_only:
+        layer_fun.prepare_forward_backward()
+        function = layer_fun.forward_backward
+    else:
+        layer_fun.prepare_forward_only()
+        function = layer_fun.forward_only
 
     if torch.cuda.is_available():
         layer_memory = torch.cuda.max_memory_allocated(device)
@@ -37,7 +42,7 @@ def main(args) -> None:
     timer =  benchmark.Timer(
         stmt="function()",
         globals={
-            "function": layer_fun.forward_backward
+            "function": function
         },
         num_threads=1
     )
@@ -69,6 +74,10 @@ if __name__ == "__main__":
         default=20, 
         type=int, 
         help="how many forward/backward passes per run"
+    )
+    parser.add_argument(
+        "--forward_only",
+        action="store_true"
     )
     args = parser.parse_args()
     main(args)
