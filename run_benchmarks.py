@@ -51,6 +51,8 @@ def main(args) -> None:
 
                 for _ in range(args.num_runs):
                     cmd = f'CUDA_VISIBLE_DEVICES=0 python3 -W ignore benchmark_layer.py {layer} --batch_size {batch_size} -c {args.config_file} --num_repeats {args.num_repeats}'
+                    if args.forward_only:
+                        cmd += ' --forward_only'
                     logger.info(f'Starting {cmd}')
                     out = subprocess.run(
                         [cmd],
@@ -104,6 +106,10 @@ if __name__ == "__main__":
         choices=[v for k, v in LayerType.__dict__.items() if not k.startswith('__')],
         default='all',
         nargs='+'
+    )
+    parser.add_argument(
+        "--forward_only",
+        action="store_true"
     )
     parser.add_argument('--no_save', action="store_true")
     args = parser.parse_args()

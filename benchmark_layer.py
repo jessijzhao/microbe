@@ -2,13 +2,36 @@ import argparse
 import json
 import torch
 import torch.utils.benchmark as benchmark
+
 from layers import LayerFactory, LayerType
-from utils import get_layer_set
+from utils import device, get_layer_set, reset_peak_memory_stats
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-TIME_FACTOR = 1e3 #ms
-MEM_FACTOR = 1e-9 #GB
+TIME_FACTOR = 1e3 # ms (milliseconds)
+MEM_FACTOR = 1e-9 # GB (gigabytes)
+
+def run_layer_benchmark(benchmark_fun, num_repeats):
+    if torch.cuda.is_available():
+        # get memory allocated and reset memory statistics
+        layer_memory = reset_peak_memory_stats(device)[1]
+
+    # benchmark.Timer performs its own warmups
+    timer =  benchmark.Timer(
+        stmt="benchmark_fun()",
+        globals={
+            "benchmark_fun": benchmark_fun
+        },
+        num_threads=1
+    )
+    runtime = timer.timeit(num_repeats).mean
+
+    if torch.cuda.is_available():
+        # get max memory allocated and reset memory statistics
+        max_memory = reset_peak_memory_stats(device)[0]
+    else:
+        max_memory = float('nan')
+
+    return runtime, layer_memory, max_memory
 
 
 def main(args) -> None:
@@ -16,44 +39,24 @@ def main(args) -> None:
     with open(args.config_file) as config_file:
         config = json.load(config_file)
 
-    layer_set = get_layer_set(args.layer)
-
     if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        assert(torch.cuda.memory_allocated(device) == 0)
+        assert(reset_peak_memory_stats(device)[1] == 0)
 
     # setup layer
     layer_fun = LayerFactory.create(
         layer_name=args.layer,
         batch_size=args.batch_size,
-        **config[layer_set]
+        **config[get_layer_set(args.layer)]
     )
-    if not args.forward_only:
-        layer_fun.prepare_forward_backward()
-        function = layer_fun.forward_backward
-    else:
+
+    if args.forward_only:
         layer_fun.prepare_forward_only()
-        function = layer_fun.forward_only
-
-    if torch.cuda.is_available():
-        layer_memory = torch.cuda.max_memory_allocated(device)
-    
-    # benchmark.Timer performs own warmups
-    timer =  benchmark.Timer(
-        stmt="function()",
-        globals={
-            "function": function
-        },
-        num_threads=1
-    )
-    runtime = timer.timeit(args.num_repeats).mean
-
-    # get max memory allocated
-    if torch.cuda.is_available():
-        max_memory = torch.cuda.max_memory_allocated(device)
+        benchmark_fun = layer_fun.forward_only
     else:
-        max_memory = float('nan')
+        layer_fun.prepare_forward_backward()
+        benchmark_fun = layer_fun.forward_backward
     
+    runtime, layer_memory, max_memory = run_layer_benchmark(benchmark_fun, args.num_repeats)
     print(runtime * TIME_FACTOR, layer_memory * MEM_FACTOR, max_memory * MEM_FACTOR)
 
 

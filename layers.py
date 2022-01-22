@@ -51,9 +51,11 @@ class LayerFactory:
             self.criterion = criterion
         
         def prepare_forward_only(self):
+            """Benchmark forward_only in eval mode"""
             self.layer.eval()
 
         def prepare_forward_backward(self):
+            """Benchmark forward + backward in train mode"""
             self.layer.train()
         
         def forward_only(self):
@@ -424,25 +426,25 @@ class LayerFactory:
             return LayerFactory.make_private(
                 LayerFactory.LinearBase(**kwargs)
             )
-        if layer_name == LayerType.CONV:
+        elif layer_name == LayerType.CONV:
             return LayerFactory.ConvBase(**kwargs)
         elif layer_name == LayerType.GSM_CONV:
             return LayerFactory.make_private(
                 LayerFactory.ConvBase(**kwargs)
             )
-        if layer_name == LayerType.LAYERNORM:
+        elif layer_name == LayerType.LAYERNORM:
             return LayerFactory.LayerNormBase(**kwargs)
         elif layer_name == LayerType.GSM_LAYERNORM:
             return LayerFactory.make_private(
                 LayerFactory.LayerNormBase(**kwargs)
             )
-        if layer_name == LayerType.INSTANCENORM:
+        elif layer_name == LayerType.INSTANCENORM:
             return LayerFactory.InstanceNormBase(**kwargs)
         elif layer_name == LayerType.GSM_INSTANCENORM:
             return LayerFactory.make_private(
                 LayerFactory.InstanceNormBase(**kwargs)
             )
-        if layer_name == LayerType.GROUPNORM:
+        elif layer_name == LayerType.GROUPNORM:
             return LayerFactory.GroupNormBase(**kwargs)
         elif layer_name == LayerType.GSM_GROUPNORM:
             return LayerFactory.make_private(

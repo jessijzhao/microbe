@@ -3,7 +3,7 @@ import time
 import torch
 import unittest
 
-from benchmark_layer import benchmark_layer_function
+from benchmark_layer import run_layer_benchmark
 from layers import LayerFactory
 from utils import device, reset_peak_memory_stats
 
@@ -14,7 +14,7 @@ class BenchmarkLayerTest(unittest.TestCase):
     def test_runtime_benchmark(self):
         for duration in [0, 0.005, 0.01, 0.1]:
             for num_repeats in NUM_REPEATS:
-                runtime, layer_memory, max_memory = benchmark_layer_function(
+                runtime, layer_memory, max_memory = run_layer_benchmark(
                     lambda: time.sleep(duration), num_repeats
                 )
                 # account for small variations
@@ -47,7 +47,7 @@ class BenchmarkLayerTest(unittest.TestCase):
                         layer = torch.zeros(layer_size, dtype=torch.int8, device=device)
 
                         # allocate memory (int8 = 1 byte)
-                        runtime, layer_memory, max_memory = benchmark_layer_function(
+                        runtime, layer_memory, max_memory = run_layer_benchmark(
                             lambda: torch.zeros(num_bytes, dtype=torch.int8, device=device),
                             num_repeats
                         )
