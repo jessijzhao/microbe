@@ -1,53 +1,47 @@
 import torch
-import unittest
+import pytest
 
 from utils import device, get_layer_set, reset_peak_memory_stats
+from utils_test import get_n_byte_tensor, get_actual_memory_allocated
+
+@pytest.mark.parametrize('layer_set, layers', [
+    # Pytorch layers are named layer (no DP) or gsm_layer (DP)
+    ('linear', ['linear', 'gsm_linear']),
+    ('conv', ['conv', 'gsm_conv']),
+    # Opacus layers are named dplayer (no DP) or gsm_dplayer (DP)
+    ('mha', ['mha', 'dpmha', 'gsm_dpmha']),
+    # RNN-based models share the same interface
+    ('rnn_base', ['rnn', 'dprnn', 'gsm_dprnn']),
+    ('rnn_base', ['lstm', 'dplstm', 'gsm_dplstm'])
+])
+def test_get_layer_set(layer_set, layers):
+    assert(all(get_layer_set(layer) == layer_set for layer in layers))
 
 
-class UtilsTest(unittest.TestCase):
-    
-    def test_get_layer_set(self):
-        # Pytorch layers are named layer (no DP) or gsm_layer (DP)
-        assert(get_layer_set('linear') == get_layer_set('gsm_linear') == 'linear')
-        assert(get_layer_set('conv') == get_layer_set('gsm_conv') == 'conv')
-        # Opacus layers are named dplayer (no DP) or gsm_dplayer (DP)
-        assert(get_layer_set('mha') == get_layer_set('dpmha') == get_layer_set('gsm_dpmha') == 'mha')
-        # RNN-based models share the same interface
-        assert(get_layer_set('rnn') == get_layer_set('dprnn') == get_layer_set('gsm_dprnn') == 'rnn_base')
-        assert(get_layer_set('lstm') == get_layer_set('dplstm') == get_layer_set('gsm_dplstm') == 'rnn_base')
-    
-    def test_reset_peak_memory_stats(self):
-        
-        # prev_max_memory = allocated_memory = 0 --> (0, 0)
-        prev_max_memory = torch.cuda.max_memory_allocated(device)
-        allocated_memory = torch.cuda.memory_allocated(device)
-        assert(prev_max_memory == allocated_memory == 0)
-        assert(reset_peak_memory_stats(device) == (0, 0))
+@pytest.mark.parametrize('prev_max_memory, allocated_memory', [
+    # prev_max_memory = allocated_memory = 0 --> (0, 0)
+    (0, 0),
+    # prev_max_memory = allocated_memory > 0 --> (prev_max_memory, prev_max_memory)
+    (1, 1),
+    # prev_max_memory > allocated_memory = 0 --> (prev_max_memory, 0)
+    (1, 0),
+    # prev_max_memory > allocated_memory > 0 --> (prev_max_memory, allocated_memory)
+    (2, 1),
+])
+def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int):
+    # keep x, delete y
+    x = get_n_byte_tensor(allocated_memory)
+    y = get_n_byte_tensor(prev_max_memory - allocated_memory)
+    del y
 
-        # prev_max_memory = allocated_memory > 0 --> (prev_max_memory, prev_max_memory)
-        x = torch.zeros(1, device=device)
-        prev_max_memory = torch.cuda.max_memory_allocated(device)
-        assert(prev_max_memory == torch.cuda.memory_allocated(device) > 0)
-        assert(reset_peak_memory_stats(device) == (prev_max_memory, prev_max_memory))
+    # get the true allocated memory (CUDA memory is allocated in blocks)
+    prev_max_memory = torch.cuda.max_memory_allocated(device)
+    allocated_memory = torch.cuda.memory_allocated(device)
+    assert(reset_peak_memory_stats(device) == (prev_max_memory, allocated_memory))
 
-        # prev_max_memory > allocated_memory = 0 --> (prev_max_memory, 0)
-        x = torch.zeros(1, device=device)
-        del x
-        prev_max_memory = torch.cuda.max_memory_allocated(device)
-        assert(prev_max_memory > torch.cuda.memory_allocated(device) == 0)
-        assert(reset_peak_memory_stats(device) == (prev_max_memory, 0))
-
-        # prev_max_memory > allocated_memory > 0 --> (prev_max_memory, allocated_memory)
-        x, y = torch.zeros(1, device=device), torch.ones(1, device=device)
-        del x
-        prev_max_memory = torch.cuda.max_memory_allocated(device)
-        allocated_memory = torch.cuda.memory_allocated(device)
-        assert(prev_max_memory > allocated_memory > 0)
-        assert(reset_peak_memory_stats(device) == (prev_max_memory, allocated_memory))
-
-        # clean-up
-        del y
-        assert(reset_peak_memory_stats(device)[1] == 0)
+    # clean up
+    del x
+    assert(reset_peak_memory_stats(device) == (allocated_memory, 0))
 
 
 

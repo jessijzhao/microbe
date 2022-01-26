@@ -10,7 +10,31 @@ from utils import device, get_layer_set, reset_peak_memory_stats
 TIME_FACTOR = 1e3 # ms (milliseconds)
 MEM_FACTOR = 1e-9 # GB (gigabytes)
 
-def run_layer_benchmark(benchmark_fun, num_repeats):
+def run_layer_benchmark(
+    layer_name: LayerType,
+    batch_size: int,
+    num_repeats: int,
+    forward_only: bool,
+    create_layer = LayerFactory.create,
+    **kwargs,
+):
+    if torch.cuda.is_available():
+        assert(reset_peak_memory_stats(device)[1] == 0)
+
+    # setup layer
+    layer_fun = create_layer(
+        layer_name=layer_name,
+        batch_size=batch_size,
+        **kwargs,
+    )
+
+    if forward_only:
+        layer_fun.eval()
+        benchmark_fun = layer_fun.forward_only
+    else:
+        layer_fun.train()
+        benchmark_fun = layer_fun.forward_backward
+
     if torch.cuda.is_available():
         # get memory allocated and reset memory statistics
         layer_memory = reset_peak_memory_stats(device)[1]
@@ -18,9 +42,7 @@ def run_layer_benchmark(benchmark_fun, num_repeats):
     # benchmark.Timer performs its own warmups
     timer =  benchmark.Timer(
         stmt="benchmark_fun()",
-        globals={
-            "benchmark_fun": benchmark_fun
-        },
+        globals={"benchmark_fun": benchmark_fun},
         num_threads=1
     )
     runtime = timer.timeit(num_repeats).mean
@@ -39,24 +61,13 @@ def main(args) -> None:
     with open(args.config_file) as config_file:
         config = json.load(config_file)
 
-    if torch.cuda.is_available():
-        assert(reset_peak_memory_stats(device)[1] == 0)
-
-    # setup layer
-    layer_fun = LayerFactory.create(
+    runtime, layer_memory, max_memory = run_layer_benchmark(
         layer_name=args.layer,
         batch_size=args.batch_size,
-        **config[get_layer_set(args.layer)]
+        num_repeats=args.num_repeats,
+        forward_only=args.forward_only,
+        **config[get_layer_set(args.layer)],
     )
-
-    if args.forward_only:
-        layer_fun.prepare_forward_only()
-        benchmark_fun = layer_fun.forward_only
-    else:
-        layer_fun.prepare_forward_backward()
-        benchmark_fun = layer_fun.forward_backward
-    
-    runtime, layer_memory, max_memory = run_layer_benchmark(benchmark_fun, args.num_repeats)
     print(runtime * TIME_FACTOR, layer_memory * MEM_FACTOR, max_memory * MEM_FACTOR)
 
 
@@ -76,7 +87,7 @@ if __name__ == "__main__":
         "--num_repeats", 
         default=20, 
         type=int, 
-        help="how many forward/backward passes per run"
+        help="how many forward/backward passes to run"
     )
     parser.add_argument(
         "--forward_only",

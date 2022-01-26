@@ -43,28 +43,23 @@ class LayerType:
 class LayerFactory:
 
     class Layer:
-        def __init__(
-            self,
-            *,
-            criterion=F.cross_entropy
-        ):
+        def __init__(self, *, criterion=F.cross_entropy):
             self.criterion = criterion
+            self.layer = None
+            self.labels = None
         
-        def prepare_forward_only(self):
+        def eval(self):
             """Benchmark forward_only in eval mode"""
             self.layer.eval()
 
-        def prepare_forward_backward(self):
+        def train(self):
             """Benchmark forward + backward in train mode"""
             self.layer.train()
         
-        def forward_only(self):
+        def forward_only(self) -> torch.Tensor:
             return self.layer(*self.layer_inputs)
 
-        def forward_only_no_hooks(self):
-            return self.layer.forward(*self.layer_inputs)
-
-        def forward_backward(self) -> torch.Tensor:
+        def forward_backward(self):
             preds = self.forward_only()
             loss = self.criterion(preds, self.labels)
             loss.backward()
@@ -249,7 +244,7 @@ class LayerFactory:
             self.labels = torch.randn(batch_size, *input_shape, embedding_dim, device=device)
     
     class CLayer(Layer):
-        def forward_only(self):
+        def forward_only(self) -> torch.Tensor:
             return self.layer(*self.layer_inputs)[0]
 
     class MHABase(CLayer):
