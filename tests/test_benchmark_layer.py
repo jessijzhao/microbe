@@ -1,7 +1,6 @@
 import math
 import time
 import torch
-import pytest
 
 from benchmark_layer import run_layer_benchmark
 from layers import LayerFactory
