@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from utils import device, get_layer_set, reset_peak_memory_stats
-from utils_test import get_n_byte_tensor
+from helpers import get_n_byte_tensor
 
 @pytest.mark.parametrize('layer_set, layers', [
     # Pytorch layers are named layer (no DP) or gsm_layer (DP)

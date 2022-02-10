@@ -5,7 +5,7 @@ import torch
 from benchmark_layer import run_layer_benchmark
 from layers import LayerFactory
 from utils import device, reset_peak_memory_stats
-from utils_test import get_n_byte_tensor, get_actual_memory_allocated
+from helpers import get_n_byte_tensor, get_actual_memory_allocated
 
 NUM_REPEATS = [10, 20, 50]
 
