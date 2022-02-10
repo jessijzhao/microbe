@@ -1,3 +1,5 @@
+from typing import List
+
 import pytest
 import torch
 from helpers import get_n_byte_tensor
@@ -18,7 +20,13 @@ from utils import device, get_layer_set, reset_peak_memory_stats
         ("rnn_base", ["lstm", "dplstm", "gsm_dplstm"]),
     ],
 )
-def test_get_layer_set(layer_set, layers):
+def test_get_layer_set(layer_set: str, layers: List[str]) -> None:
+    """Test assignment of individual layers to the layer set
+
+    Args:
+        - layer_set: layer set (e.g. linear, rnn_base)
+        - layers: non-exhaustive list of layers that belong to the layer_set
+    """
     assert all(get_layer_set(layer) == layer_set for layer in layers)
 
 
@@ -35,7 +43,16 @@ def test_get_layer_set(layer_set, layers):
         (2, 1),
     ],
 )
-def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int):
+def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int) -> None:
+    """Test resetting of peak memory stats
+
+    Notes: Only the relative and not the absolute sizes of prev_max_memory and
+    allocated_memory are relevant.
+
+    Args:
+        - prev_max_memory: current maximum memory stat to simulate
+        - allocated_memory: current allocated memory to simulate
+    """
     # keep x, delete y
     x = get_n_byte_tensor(allocated_memory)
     y = get_n_byte_tensor(prev_max_memory - allocated_memory)
