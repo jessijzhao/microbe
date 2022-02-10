@@ -1,12 +1,15 @@
 import torch
 
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 def get_n_byte_tensor(n: int, device: torch.device = device):
     """Returns tensor with n bytes, since int8 = 1 byte."""
     return torch.zeros(n, dtype=torch.int8, device=device)
 
-def get_actual_memory_allocated(n: int, device : torch.device = device):
+
+def get_actual_memory_allocated(n: int, device: torch.device = device):
     """Returns the number of bytes actually allocated for an n byte tensor.
     Reset memory statistics.
     """

@@ -1,5 +1,6 @@
 import argparse
 import json
+
 import torch
 import torch.utils.benchmark as benchmark
 
@@ -7,19 +8,20 @@ from layers import LayerFactory, LayerType
 from utils import device, get_layer_set, reset_peak_memory_stats
 
 
-TIME_FACTOR = 1e3 # ms (milliseconds)
-MEM_FACTOR = 1e-9 # GB (gigabytes)
+TIME_FACTOR = 1e3  # ms (milliseconds)
+MEM_FACTOR = 1e-9  # GB (gigabytes)
+
 
 def run_layer_benchmark(
     layer_name: LayerType,
     batch_size: int,
     num_repeats: int,
     forward_only: bool,
-    create_layer = LayerFactory.create,
+    create_layer=LayerFactory.create,
     **kwargs,
 ):
     if torch.cuda.is_available():
-        assert(reset_peak_memory_stats(device)[1] == 0)
+        assert reset_peak_memory_stats(device)[1] == 0
 
     # setup layer
     layer_fun = create_layer(
@@ -40,10 +42,8 @@ def run_layer_benchmark(
         layer_memory = reset_peak_memory_stats(device)[1]
 
     # benchmark.Timer performs its own warmups
-    timer =  benchmark.Timer(
-        stmt="benchmark_fun()",
-        globals={"benchmark_fun": benchmark_fun},
-        num_threads=1
+    timer = benchmark.Timer(
+        stmt="benchmark_fun()", globals={"benchmark_fun": benchmark_fun}, num_threads=1
     )
     runtime = timer.timeit(num_repeats).mean
 
@@ -51,7 +51,7 @@ def run_layer_benchmark(
         # get max memory allocated and reset memory statistics
         max_memory = reset_peak_memory_stats(device)[0]
     else:
-        max_memory = float('nan')
+        max_memory = float("nan")
 
     return runtime, layer_memory, max_memory
 
@@ -73,25 +73,18 @@ def main(args) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('layer',
-        choices=[v for k, v in LayerType.__dict__.items() if not k.startswith('__')],
-    )
-    parser.add_argument('--batch_size', type=int)
     parser.add_argument(
-        "-c",
-        "--config_file",
-        type=str,
-        default="config.json"
+        "layer",
+        choices=[v for k, v in LayerType.__dict__.items() if not k.startswith("__")],
     )
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("-c", "--config_file", type=str, default="config.json")
     parser.add_argument(
-        "--num_repeats", 
-        default=20, 
-        type=int, 
-        help="how many forward/backward passes to run"
+        "--num_repeats",
+        default=20,
+        type=int,
+        help="how many forward/backward passes to run",
     )
-    parser.add_argument(
-        "--forward_only",
-        action="store_true"
-    )
+    parser.add_argument("--forward_only", action="store_true")
     args = parser.parse_args()
     main(args)

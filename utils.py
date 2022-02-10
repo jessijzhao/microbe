@@ -1,8 +1,10 @@
-import torch
-
 from typing import Tuple
 
+import torch
+
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
     """Safely resets CUDA peak memory statistics of device if it is
@@ -25,7 +27,7 @@ def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
         if prev_max_memory != memory_allocated and prev_max_memory > 0:
             # raises RuntimeError if no previous allocation occurred
             torch.cuda.reset_peak_memory_stats(device)
-            assert(torch.cuda.max_memory_allocated(device) == memory_allocated)
+            assert torch.cuda.max_memory_allocated(device) == memory_allocated
 
         return prev_max_memory, memory_allocated
 
@@ -50,7 +52,7 @@ def get_layer_set(layer: str) -> str:
     layer_set = layer.replace("gsm_dp", "").replace("gsm_", "").replace("dp", "")
 
     # all RNN-based model use the same config
-    if layer_set in ['rnn', 'gru', 'lstm']:
-        layer_set = 'rnn_base'
+    if layer_set in ["rnn", "gru", "lstm"]:
+        layer_set = "rnn_base"
 
     return layer_set
