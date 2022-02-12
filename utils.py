@@ -1,4 +1,5 @@
-from typing import Tuple
+import pickle
+from typing import Any, Dict, List, Tuple
 
 import torch
 
@@ -56,3 +57,69 @@ def get_layer_set(layer: str) -> str:
         layer_set = "rnn_base"
 
     return layer_set
+
+
+def get_path(
+    layer: str,
+    batch_size: int,
+    num_runs: int,
+    num_repeats: int,
+    root: str = "./results/raw/",
+) -> str:
+    """Gets the path to the file where the corresponding results are located.
+    File is presumed to be pickle file.
+
+    Args:
+        layer: full layer name
+        batch_size: batch size
+        num_runs: number of runs per benchmark
+        num_repeats: how many benchmarks were run
+
+    Returns:
+        Path to results pickle file
+    """
+    pickle_name = f"{layer}_bs_{batch_size}_runs_{num_runs}_repeats_{num_repeats}"
+    return f"{root}{pickle_name}.pkl"
+
+
+def save_results(
+    layer: str,
+    batch_size: int,
+    num_runs: int,
+    num_repeats: int,
+    results: List[Dict[str, Any]],
+    config: Dict,
+    root: str = "./results/raw/",
+) -> None:
+    """Saves the corresponding results as a pickle file.
+
+    Args:
+        layer: full layer name
+        batch_size: batch size
+        num_runs: number of runs per benchmark
+        num_repeats: how many benchmarks were run
+        runtimes: list of runtimes of length num_repeats
+        memory: list of memory stats of length num_repeats
+        config: layer config
+    """
+    path = get_path(
+        layer=layer,
+        batch_size=batch_size,
+        num_runs=num_runs,
+        num_repeats=num_repeats,
+        root=root,
+    )
+
+    with open(path, "wb") as handle:
+        pickle.dump(
+            {
+                "layer": layer,
+                "batch_size": batch_size,
+                "num_runs": num_runs,
+                "num_repeats": num_repeats,
+                "results": results,
+                "config": config,
+            },
+            handle,
+            protocol=pickle.HIGHEST_PROTOCOL,
+        )

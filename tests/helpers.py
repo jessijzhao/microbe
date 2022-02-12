@@ -1,18 +1,44 @@
+import pytest
 import torch
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+skipifnocuda = pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Requires CUDA."
+)
 
-def get_n_byte_tensor(n: int, device: torch.device = device):
-    """Returns tensor with n bytes, since int8 = 1 byte."""
+
+def get_n_byte_tensor(n: int, device: torch.device = device) -> torch.tensor:
+    """Returns a torch.int8 tensor of size n.
+
+    Args:
+        n: size of the tensor to allocate
+        device: torch.device to allocate tensor on
+
+    Returns:
+        torch.int8 tensor of size n on device
+
+    Notes: Though 1 int8 = 1 byte, memory is allocated in blocks, such that the size
+    of the tensor in bytes >= n.
+    """
     return torch.zeros(n, dtype=torch.int8, device=device)
 
 
-def get_actual_memory_allocated(n: int, device: torch.device = device):
-    """Returns the number of bytes actually allocated for an n byte tensor.
-    Reset memory statistics.
+def get_actual_memory_allocated(n: int, device: torch.device = device) -> int:
     """
+    Returns the CUDA memory allocated for a torch.int8 tensor of size n.
+
+    Args:
+        n: size of the tensor to get allocated memory for
+        device: torch.device to allocate tensor on
+
+    Returns:
+        Number of bytes of CUDA memory allocated for a torch.int8 tensor of size n.
+
+    Notes: Should only be called on CUDA devices. Resets CUDA memory statistics.
+    """
+    assert device.type == "cuda"
     prev_memory_allocated = torch.cuda.memory_allocated(device)
     tensor = get_n_byte_tensor(n)
     memory_allocated = torch.cuda.memory_allocated(device)

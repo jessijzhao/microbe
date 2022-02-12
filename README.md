@@ -8,11 +8,9 @@ A set of **microbe**nchmarks that compares [Opacus](https://github.com/pytorch/o
 
 - [config.json](config.json) contains an example JSON config to run benchmarks with
 
-- [layers.py](layers.py) implements the generation of each layer and its input as well as the forward/backward pass for each layer
+- [layers.py](layers.py) implements each layer, its input, and the forward/backward pass for each layer
 
-- [benchmarks.py](benchmarks.py) provides benchmarks using Python's timeit, CUDA, and PyTorch's timer respectively (default: PyTorch's benchmarking itmer)
-
-- [results/analysis.ipynb](results/analysis.ipynb) analyzes and plots the benchmark results
+- [results](results) contains notebooks for analyzing and plotting the benchmarking results
 
 
 ## Benchmarks
@@ -27,7 +25,7 @@ Do this num_runs times:
 
     Do this num_repeats times:
         preds = layer(input)
-        loss = self.cross_entropy(preds, self.labels)
+        loss = self.criterion(preds, self.labels)
         loss.backward()
 
     Stop timer
@@ -66,19 +64,30 @@ A note on `input_shape` in [config.json](config.json): parameters that are share
 
 ## Usage
 
+If saving results, ensure that `results/raw` directory exists.
+
 ```
- optional arguments:
+usage: run_benchmarks.py [-h] [-c CONFIG_FILE] [-v] [--num_runs NUM_RUNS]
+                         [--num_repeats NUM_REPEATS] [--cont]
+                         [--batch_sizes BATCH_SIZES [BATCH_SIZES ...]]
+                         [--layers {linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} [{linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} ...]]
+                         [--forward_only] [--no_save]
+
+optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG_FILE, --config_file CONFIG_FILE
   -v, --verbose
-  --timer TIMER         use Python, CUDA or PyTorch timer
   --num_runs NUM_RUNS   number of benchmarking runs
   --num_repeats NUM_REPEATS
                         how many forward/backward passes per run
-  --num_warmups NUM_WARMUPS
-                        number of warmups for custom benchmarks
   --cont                only run missing experiments
   --batch_sizes BATCH_SIZES [BATCH_SIZES ...]
-  --layers LAYERS [LAYERS ...]
+  --layers {linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} [{linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} ...]
+  --forward_only
   --no_save
 ```
+
+
+## Tests
+
+```python -m pytest tests/```

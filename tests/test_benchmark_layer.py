@@ -4,7 +4,7 @@ from typing import List
 
 import pytest
 import torch
-from helpers import get_actual_memory_allocated, get_n_byte_tensor
+from helpers import get_actual_memory_allocated, get_n_byte_tensor, skipifnocuda
 
 from benchmark_layer import run_layer_benchmark
 from layers import LayerFactory
@@ -52,10 +52,10 @@ class FakeLayer(LayerFactory.Layer):
     [([0, 0.005, 0.01, 0.05])],
 )
 def test_runtime_benchmark(duration_list: List[float]) -> None:
-    """Test runtime benchmarks on a dummy layer.
+    """Tests runtime benchmarks on a dummy layer.
 
     Args:
-        - duration_list: list of durations (s) to test runtime benchmarks for
+        duration_list: list of durations (s) to test runtime benchmarks for
     """
     for duration in duration_list:
         for num_repeats in NUM_REPEATS:
@@ -76,6 +76,7 @@ def test_runtime_benchmark(duration_list: List[float]) -> None:
                     assert layer_memory == 0 and max_memory == 0
 
 
+@skipifnocuda
 @pytest.mark.parametrize(
     "pass_bytes_list, layer_bytes_list",
     [([1, 128, 256, 500, 512, 1024, 2000], [0, 128, 500])],
@@ -83,7 +84,7 @@ def test_runtime_benchmark(duration_list: List[float]) -> None:
 def test_memory_benchmark(
     pass_bytes_list: List[int], layer_bytes_list: List[int], strict: bool = True
 ) -> None:
-    """Test CUDA max_memory benchmarks on a dummy layer.
+    """Tests CUDA max_memory benchmarks on a dummy layer.
 
     Notes: During the experiments included in the paper, CUDA memory is allocated
     in blocks, where block sizes vary across kernels. New CUDA memory is
@@ -91,58 +92,55 @@ def test_memory_benchmark(
     allocation scheme.
 
     Args:
-        - pass_bytes_list: list of bytes that each forward or backward pass allocates
-        - layer_bytes_list: list of bytes that the input and layer allocate
-        - strict: whether to predict each measurement based on block size
+        pass_bytes_list: list of bytes that each forward or backward pass allocates
+        layer_bytes_list: list of bytes that the input and layer allocate
+        strict: whether to predict each measurement based on block size
     """
+    if strict:
+        # find the block size by creating a tensor of size 1 byte
+        tiny_tensor = get_n_byte_tensor(1)
+        BLOCK_SIZE = torch.cuda.max_memory_allocated(device)
+        del tiny_tensor
 
-    if torch.cuda.is_available():
-
+    # bytes allocated during forward/backward pass
+    for pass_bytes in pass_bytes_list:
+        true_pass_memory = get_actual_memory_allocated(pass_bytes)
         if strict:
-            # find the block size by creating a tensor of size 1 byte
-            tiny_tensor = get_n_byte_tensor(1)
-            BLOCK_SIZE = torch.cuda.max_memory_allocated(device)
-            del tiny_tensor
+            num_blocks_pass = math.ceil(pass_bytes / BLOCK_SIZE)
 
-        # bytes allocated during forward/backward pass
-        for pass_bytes in pass_bytes_list:
-            true_pass_memory = get_actual_memory_allocated(pass_bytes)
+        # bytes allocated for the layer, inputs, etc.
+        for layer_bytes in layer_bytes_list:
+            true_layer_memory = get_actual_memory_allocated(layer_bytes)
             if strict:
-                num_blocks_pass = math.ceil(pass_bytes / BLOCK_SIZE)
+                num_blocks_layer = math.ceil(layer_bytes / BLOCK_SIZE)
 
-            # bytes allocated for the layer, inputs, etc.
-            for layer_bytes in layer_bytes_list:
-                true_layer_memory = get_actual_memory_allocated(layer_bytes)
+            for num_repeats in NUM_REPEATS:
+                for forward_only in [0, 1]:
+                    # reset memory stats and ensure there is no memory leakage
+                    assert reset_peak_memory_stats(device)[1] == 0
+
+                    runtime, layer_memory, max_memory = run_layer_benchmark(
+                        layer_name="",
+                        batch_size=0,
+                        num_repeats=num_repeats,
+                        forward_only=forward_only,
+                        create_layer=FakeLayer,
+                        layer_memory=layer_bytes,
+                        pass_memory=pass_bytes,
+                    )
+                assert layer_memory == true_layer_memory
+                assert (
+                    max_memory
+                    == true_layer_memory + (2 - forward_only) * true_pass_memory
+                )
+
                 if strict:
-                    num_blocks_layer = math.ceil(layer_bytes / BLOCK_SIZE)
-
-                for num_repeats in NUM_REPEATS:
-                    for forward_only in [0, 1]:
-                        # reset memory stats and ensure there is no memory leakage
-                        assert reset_peak_memory_stats(device)[1] == 0
-
-                        runtime, layer_memory, max_memory = run_layer_benchmark(
-                            layer_name="",
-                            batch_size=0,
-                            num_repeats=num_repeats,
-                            forward_only=forward_only,
-                            create_layer=FakeLayer,
-                            layer_memory=layer_bytes,
-                            pass_memory=pass_bytes,
-                        )
-                    assert layer_memory == true_layer_memory
+                    assert layer_memory == num_blocks_layer * BLOCK_SIZE
                     assert (
                         max_memory
-                        == true_layer_memory + (2 - forward_only) * true_pass_memory
+                        == (num_blocks_layer + (2 - forward_only) * num_blocks_pass)
+                        * BLOCK_SIZE
                     )
 
-                    if strict:
-                        assert layer_memory == num_blocks_layer * BLOCK_SIZE
-                        assert (
-                            max_memory
-                            == (num_blocks_layer + (2 - forward_only) * num_blocks_pass)
-                            * BLOCK_SIZE
-                        )
-
-        # reset memory stats and ensure there is no memory leakage
-        assert reset_peak_memory_stats(device)[1] == 0
+    # reset memory stats and ensure there is no memory leakage
+    assert reset_peak_memory_stats(device)[1] == 0

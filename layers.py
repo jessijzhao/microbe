@@ -4,8 +4,7 @@ import torch.nn.functional as F
 from opacus.grad_sample import GradSampleModule
 from opacus.layers import DPGRU, DPLSTM, DPRNN, DPMultiheadAttention
 
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+from utils import device
 
 
 class LayerType:
