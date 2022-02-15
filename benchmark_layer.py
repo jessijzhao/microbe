@@ -1,6 +1,6 @@
 import argparse
 import json
-from typing import Tuple
+from typing import Callable, Tuple
 
 import torch
 import torch.utils.benchmark as benchmark
@@ -18,7 +18,7 @@ def run_layer_benchmark(
     batch_size: int,
     num_repeats: int,
     forward_only: bool,
-    create_layer=LayerFactory.create,
+    create_layer: Callable = LayerFactory.create,
     **kwargs,
 ) -> Tuple[float, int, int]:
 

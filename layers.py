@@ -1,10 +1,11 @@
+from abc import abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from opacus.grad_sample import GradSampleModule
 from opacus.layers import DPGRU, DPLSTM, DPRNN, DPMultiheadAttention
-
-from utils import device
 
 
 class LayerType:
@@ -36,85 +37,103 @@ class LayerType:
 
 class LayerFactory:
     class Layer:
-        def __init__(self, *, criterion=F.cross_entropy):
-            self.criterion = criterion
-            self.layer = None
-            self.labels = None
+        @abstractmethod
+        def __init__(
+            self,
+            *,
+            batch_size: int,
+            random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
+            **kwargs,
+        ):
+            torch.manual_seed(random_seed)
+            self._criterion: Callable = criterion
+            self._layer: nn.Module = nn.Module()
+            self._layer_inputs: List[Any] = [torch.zeros(batch_size)]
+            self._labels: torch.Tensor = torch.zeros(batch_size)
 
-        def eval(self):
-            """Benchmark forward_only in eval mode"""
-            self.layer.eval()
+        def to(
+            self, device: Optional[torch.device], forward_only: bool = False
+        ) -> Dict[str, float]:
+            self._layer.to(device)
+            for item in self._layer_inputs:
+                item.to(device)
+            if not forward_only:
+                self._labels.to(device)
+            return {}
 
-        def train(self):
-            """Benchmark forward + backward in train mode"""
-            self.layer.train()
+        def prepare_layer(self, forward_only: bool = False) -> None:
+            if forward_only:
+                self._layer.eval()
+            else:
+                self._layer.train()
 
         def forward_only(self) -> torch.Tensor:
-            return self.layer(*self.layer_inputs)
+            return self._layer(*self._layer_inputs)
 
-        def forward_backward(self):
+        def forward_backward(self) -> None:
             preds = self.forward_only()
-            loss = self.criterion(preds, self.labels)
+            loss = self._criterion(preds, self._labels)
             loss.backward()
-            self.layer.zero_grad()
+            self._layer.zero_grad()
+
+        def make_private(self) -> None:
+            self._layer = GradSampleModule(self._layer)
 
     class LinearBase(Layer):
         def __init__(
             self,
             *,
-            batch_size,
-            input_shape,
-            in_features,
-            out_features,
-            bias=True,
-        ):
-            super().__init__()
-            self.input_tensor = torch.randn(
-                batch_size, *input_shape, in_features, device=device
-            )
-            self.layer_inputs = [self.input_tensor]
-            self.layer = nn.Linear(
+            batch_size: int,
+            input_shape: Tuple[int, ...],
+            in_features: int,
+            out_features: int,
+            bias: bool = True,
+            random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
+        ) -> None:
+            torch.manual_seed(random_seed)
+            self.input_tensor = torch.randn(batch_size, *input_shape, in_features)
+            self._layer_inputs = [self.input_tensor]
+            self._layer = nn.Linear(
                 in_features=in_features,
                 out_features=out_features,
                 bias=bias,
             )
-            self.layer.to(device)
-            self.labels = torch.randn(
-                batch_size, *input_shape, out_features, device=device
-            )
+            self.labels = torch.randn(batch_size, *input_shape, out_features)
 
     class ConvBase(Layer):
         def __init__(
             self,
             *,
-            batch_size,
-            in_channels,
-            input_shape,
-            out_channels,
-            kernel_size,
-            stride=1,
-            padding=0,
-            dilation=1,
-            groups=1,
-            bias=True,
-            padding_mode="zeros",
-        ):
-            super().__init__()
+            batch_size: int,
+            in_channels: int,
+            input_shape: Tuple[int, ...],
+            out_channels: int,
+            kernel_size: Union[int, Tuple[int, ...]],
+            stride: Union[int, Tuple[int, ...]] = 1,
+            padding: Union[int, Tuple[int, ...]] = 0,
+            dilation: Union[int, Tuple[int, ...]] = 1,
+            groups: int = 1,
+            bias: bool = True,
+            padding_mode: str = "zeros",
+            random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
+        ) -> None:
+            torch.manual_seed(random_seed)
             D = len(input_shape)
             if D == 1:
-                self.layer_name = nn.Conv1d
+                self._layer_name = nn.Conv1d
             elif D == 2:
-                self.layer_name = nn.Conv2d
+                self._layer_name = nn.Conv2d
             elif D == 3:
-                self.layer_name = nn.Conv3d
+                self._layer_name = nn.Conv3d
             else:
                 raise Exception("Input shape must be between 1 and 3 long")
 
-            self.input_tensor = torch.randn(
-                batch_size, in_channels, *input_shape, device=device
-            )
-            self.layer_inputs = [self.input_tensor]
-            self.layer = self.layer_name(
+            self.input_tensor = torch.randn(batch_size, in_channels, *input_shape)
+            self._layer_inputs = [self.input_tensor]
+            self._layer = self._layer_name(
                 in_channels=in_channels,
                 out_channels=out_channels,
                 kernel_size=kernel_size,
@@ -125,105 +144,107 @@ class LayerFactory:
                 bias=bias,
                 padding_mode=padding_mode,
             )
-            self.layer.to(device)
-            outputs = self.layer(self.input_tensor)
-            self.labels = torch.randn(outputs.shape, device=device)
+            outputs = self._layer(self.input_tensor)
+            self.labels = torch.randn(outputs.shape)
+            del outputs
 
     class LayerNormBase(Layer):
         def __init__(
-            self, *, batch_size, input_shape, D, eps=1e-05, elementwise_affine=True
-        ):
-            super().__init__()
-            self.input_tensor = torch.randn(batch_size, *input_shape, device=device)
-            self.layer_inputs = [self.input_tensor]
-            self.layer = nn.LayerNorm(
+            self,
+            *,
+            batch_size: int,
+            input_shape: Tuple[int, ...],
+            D: int,
+            eps: float = 1e-05,
+            elementwise_affine: bool = True,
+            random_seed: Optional[int] = None,
+        ) -> None:
+            torch.manual_seed(random_seed)
+            self.input_tensor = torch.randn(batch_size, *input_shape)
+            self._layer_inputs = [self.input_tensor]
+            self._layer = nn.LayerNorm(
                 normalized_shape=self.input_tensor.shape[-D:],
                 eps=eps,
                 elementwise_affine=elementwise_affine,
             )
-            self.layer.to(device)
-            self.labels = torch.randn(self.input_tensor.shape, device=device)
+            self.labels = torch.randn(self.input_tensor.shape)
 
     class InstanceNormBase(Layer):
         def __init__(
             self,
             *,
-            batch_size,
-            num_features,
-            input_shape,
-            eps=1e-05,
-            affine=False,
-            track_running_stats=False,
-        ):
-            super().__init__()
+            batch_size: int,
+            num_features: int,
+            input_shape: Tuple[int, ...],
+            eps: float = 1e-05,
+            affine: bool = False,
+            track_running_stats: bool = False,
+            random_seed: Optional[int] = None,
+        ) -> None:
+            torch.manual_seed(random_seed)
             D = len(input_shape)
             if D == 1:
-                self.layer_name = nn.InstanceNorm1d
+                self._layer_name = nn.InstanceNorm1d
             elif D == 2:
-                self.layer_name = nn.InstanceNorm2d
+                self._layer_name = nn.InstanceNorm2d
             elif D == 3:
-                self.layer_name = nn.InstanceNorm3d
+                self._layer_name = nn.InstanceNorm3d
             else:
                 raise Exception("Input shape must be between 1 and 3 long")
 
-            self.input_tensor = torch.randn(
-                batch_size, num_features, *input_shape, device=device
-            )
-            self.layer_inputs = [self.input_tensor]
-            self.layer = self.layer_name(
+            self.input_tensor = torch.randn(batch_size, num_features, *input_shape)
+            self._layer_inputs = [self.input_tensor]
+            self._layer = self._layer_name(
                 num_features=num_features,
                 eps=eps,
                 affine=affine,
                 track_running_stats=track_running_stats,
             )
-            self.layer.to(device)
-            self.labels = torch.randn(self.input_tensor.shape, device=device)
+            self.labels = torch.randn(self.input_tensor.shape)
 
     class GroupNormBase(Layer):
         def __init__(
             self,
             *,
-            batch_size,
-            input_shape,
-            num_groups,
-            num_channels,
-            eps=1e-05,
-            affine=True,
-        ):
-            super().__init__()
-            self.input_tensor = torch.randn(
-                batch_size, num_channels, *input_shape, device=device
-            )
-            self.layer_inputs = [self.input_tensor]
-            self.layer = nn.GroupNorm(
+            batch_size: int,
+            input_shape: Tuple[int, ...],
+            num_groups: int,
+            num_channels: int,
+            eps: float = 1e-05,
+            affine: bool = True,
+            random_seed: Optional[int] = None,
+        ) -> None:
+            torch.manual_seed(random_seed)
+            self.input_tensor = torch.randn(batch_size, num_channels, *input_shape)
+            self._layer_inputs = [self.input_tensor]
+            self._layer = nn.GroupNorm(
                 num_groups=num_groups, num_channels=num_channels, eps=eps, affine=affine
             )
-            self.layer.to(device)
-            self.labels = torch.randn(self.input_tensor.shape, device=device)
+            self.labels = torch.randn(self.input_tensor.shape)
 
     class EmbeddingBase(Layer):
         def __init__(
             self,
             *,
-            batch_size,
-            input_shape,
-            num_embeddings,
-            embedding_dim,
-            padding_idx=None,
-            max_norm=None,
-            norm_type=2.0,
-            scale_grad_by_freq=False,
-            sparse=False,
-        ):
-            super().__init__()
+            batch_size: int,
+            input_shape: Tuple[int, ...],
+            num_embeddings: int,
+            embedding_dim: int,
+            padding_idx: Optional[int] = None,
+            max_norm: Optional[float] = None,
+            norm_type: float = 2.0,
+            scale_grad_by_freq: bool = False,
+            sparse: bool = False,
+            random_seed: Optional[int] = None,
+        ) -> None:
+            torch.manual_seed(random_seed)
             self.input_tensor = torch.randint(
                 high=num_embeddings,
                 size=(batch_size, *input_shape),
                 dtype=torch.long,
-                device=device,
             )
-            self.layer_inputs = [self.input_tensor]
-            self.layer = nn.Embedding(
+            self._layer_inputs = [self.input_tensor]
+            self._layer = nn.Embedding(
                 num_embeddings=num_embeddings,
                 embedding_dim=embedding_dim,
                 padding_idx=padding_idx,
@@ -232,55 +253,53 @@ class LayerFactory:
                 scale_grad_by_freq=scale_grad_by_freq,
                 sparse=sparse,
             )
-            self.layer.to(device)
-            self.labels = torch.randn(
-                batch_size, *input_shape, embedding_dim, device=device
-            )
+            self.labels = torch.randn(batch_size, *input_shape, embedding_dim)
 
     class CLayer(Layer):
         def forward_only(self) -> torch.Tensor:
-            return self.layer(*self.layer_inputs)[0]
+            return self._layer(*self._layer_inputs)[0]
 
     class MHABase(CLayer):
         def __init__(
             self,
             *,
-            layer,
-            batch_size,
-            source_seq_len,
-            targ_seq_len,
-            embed_dim,
-            num_heads,
-            dropout=0.0,
-            bias=True,
-            add_bias_kv=False,
-            add_zero_attn=False,
-            kdim=None,
-            vdim=None,
-            batch_first=False,
-        ):
-            super().__init__()
+            layer: nn.Module,
+            batch_size: int,
+            source_seq_len: int,
+            targ_seq_len: int,
+            embed_dim: int,
+            num_heads: int,
+            dropout: float = 0.0,
+            bias: bool = True,
+            add_bias_kv: bool = False,
+            add_zero_attn: bool = False,
+            kdim: Optional[int] = None,
+            vdim: Optional[int] = None,
+            batch_first: bool = False,
+            random_seed: Optional[int] = None,
+        ) -> None:
+            torch.manual_seed(random_seed)
             kdim = kdim if kdim else embed_dim
             vdim = vdim if vdim else embed_dim
 
             self.input_tensor = (
-                torch.randn(targ_seq_len, batch_size, embed_dim, device=device)
+                torch.randn(targ_seq_len, batch_size, embed_dim)
                 if not batch_first
-                else torch.randn(batch_size, targ_seq_len, embed_dim, device=device)
+                else torch.randn(batch_size, targ_seq_len, embed_dim)
             )
             self.key = (
-                torch.randn(source_seq_len, batch_size, kdim, device=device)
+                torch.randn(source_seq_len, batch_size, kdim)
                 if not batch_first
-                else torch.randn(batch_size, source_seq_len, kdim, device=device)
+                else torch.randn(batch_size, source_seq_len, kdim)
             )
             self.value = (
-                torch.randn(source_seq_len, batch_size, vdim, device=device)
+                torch.randn(source_seq_len, batch_size, vdim)
                 if not batch_first
-                else torch.randn(batch_size, source_seq_len, vdim, device=device)
+                else torch.randn(batch_size, source_seq_len, vdim)
             )
-            self.layer_inputs = [self.input_tensor, self.key, self.value]
+            self._layer_inputs = [self.input_tensor, self.key, self.value]
 
-            self.layer = layer(
+            self._layer = layer(
                 embed_dim,
                 num_heads,
                 dropout=dropout,
@@ -290,50 +309,47 @@ class LayerFactory:
                 kdim=kdim,
                 vdim=vdim,
             )
-            self.layer.to(device)
             self.labels = (
-                torch.randn(targ_seq_len, batch_size, embed_dim, device=device)
+                torch.randn(targ_seq_len, batch_size, embed_dim)
                 if not batch_first
-                else torch.randn(batch_size, targ_seq_len, embed_dim, device=device)
+                else torch.randn(batch_size, targ_seq_len, embed_dim)
             )
 
     class RNNBase(CLayer):
         def __init__(
             self,
             *,
-            layer,
-            batch_size,
-            seq_len,
-            input_size,
-            hidden_size,
-            num_layers=1,
-            bias=False,
-            batch_first=False,
-            dropout=0,
-            bidirectional=False,
+            layer: nn.Module,
+            batch_size: int,
+            seq_len: int,
+            input_size: int,
+            hidden_size: int,
+            num_layers: int = 1,
+            bias: bool = False,
+            batch_first: bool = False,
+            dropout: float = 0,
+            bidirectional: bool = False,
+            random_seed: Optional[int] = None,
             **kwargs,
-        ):
-            super().__init__()
+        ) -> None:
+            torch.manual_seed(random_seed)
             self.input_tensor = (
                 torch.randn(
                     seq_len,
                     batch_size,
                     input_size,
-                    device=device,
                 )
                 if not batch_first
-                else torch.randn(batch_size, seq_len, input_size, device=device)
+                else torch.randn(batch_size, seq_len, input_size)
             )
 
             self.D = 2 if bidirectional else 1
-            self.h_0 = torch.randn(
-                self.D * num_layers, batch_size, hidden_size, device=device
-            )
-            self.layer_inputs = [self.input_tensor, self.h_0]
+            self.h_0 = torch.randn(self.D * num_layers, batch_size, hidden_size)
+            self._layer_inputs = [self.input_tensor, self.h_0]
 
-            self.layer = layer(
-                input_size,
-                hidden_size,
+            self._layer = layer(
+                input_size=input_size,
+                hidden_size=hidden_size,
                 num_layers=num_layers,
                 bias=bias,
                 batch_first=batch_first,
@@ -341,32 +357,30 @@ class LayerFactory:
                 bidirectional=bidirectional,
                 **kwargs,
             )
-            self.layer.to(device)
 
             self.labels = (
-                torch.randn(seq_len, batch_size, self.D * hidden_size, device=device)
+                torch.randn(seq_len, batch_size, self.D * hidden_size)
                 if not batch_first
-                else torch.randn(
-                    batch_size, seq_len, self.D * hidden_size, device=device
-                )
+                else torch.randn(batch_size, seq_len, self.D * hidden_size)
             )
 
     class LSTMBase(RNNBase):
         def __init__(
             self,
             *,
-            layer,
-            batch_size,
-            seq_len,
-            input_size,
-            hidden_size,
-            num_layers=1,
-            bias=False,
-            batch_first=False,
-            dropout=0,
-            bidirectional=False,
-            proj_size=0,
-        ):
+            layer: nn.Module,
+            batch_size: int,
+            seq_len: int,
+            input_size: int,
+            hidden_size: int,
+            num_layers: int = 1,
+            bias: bool = False,
+            batch_first: bool = False,
+            dropout: float = 0,
+            bidirectional: bool = False,
+            proj_size: int = 0,
+            random_seed: Optional[int] = None,
+        ) -> None:
             super().__init__(
                 layer=layer,
                 batch_size=batch_size,
@@ -381,26 +395,23 @@ class LayerFactory:
                 proj_size=proj_size,
             )
             h_out = proj_size if proj_size > 0 else hidden_size
-            self.h_0 = torch.randn(
-                self.D * num_layers, batch_size, h_out, device=device
-            )
-            self.c_0 = torch.randn(
-                self.D * num_layers, batch_size, hidden_size, device=device
-            )
-            self.layer_inputs = [self.input_tensor, (self.h_0, self.c_0)]
+            self.h_0 = torch.randn(self.D * num_layers, batch_size, h_out)
+            self.c_0 = torch.randn(self.D * num_layers, batch_size, hidden_size)
+            self._layer_inputs = [self.input_tensor, (self.h_0, self.c_0)]
 
             self.labels = (
-                torch.randn(seq_len, batch_size, self.D * h_out, device=device)
+                torch.randn(seq_len, batch_size, self.D * h_out)
                 if not batch_first
-                else torch.randn(batch_size, seq_len, self.D * h_out, device=device)
+                else torch.randn(batch_size, seq_len, self.D * h_out)
             )
 
+    @staticmethod
     def make_private(layer: Layer) -> Layer:
-        layer.layer = GradSampleModule(layer.layer)
+        layer.make_private()
         return layer
 
     @staticmethod
-    def create(layer_name: str, **kwargs):
+    def create(layer_name: str, **kwargs) -> Layer:
         if layer_name == LayerType.LINEAR:
             return LayerFactory.LinearBase(**kwargs)
         elif layer_name == LayerType.GSM_LINEAR:
@@ -458,4 +469,4 @@ class LayerFactory:
                 LayerFactory.MHABase(layer=DPMultiheadAttention, **kwargs)
             )
         else:
-            print(f"Invalid layer type: {layer_name}.")
+            raise Exception(f"Invalid layer type: {layer_name}.")
