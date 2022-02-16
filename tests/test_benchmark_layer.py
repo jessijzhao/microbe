@@ -59,7 +59,7 @@ def test_runtime_benchmark(duration_list: List[float]) -> None:
     """
     for duration in duration_list:
         for num_repeats in NUM_REPEATS:
-            for forward_only in [0, 1]:
+            for forward_only in [False, True]:
                 runtime, layer_memory, max_memory = run_layer_benchmark(
                     layer_name="",
                     batch_size=0,
@@ -115,7 +115,7 @@ def test_memory_benchmark(
                 num_blocks_layer = math.ceil(layer_bytes / BLOCK_SIZE)
 
             for num_repeats in NUM_REPEATS:
-                for forward_only in [0, 1]:
+                for forward_only in [False, True]:
                     # reset memory stats and ensure there is no memory leakage
                     assert reset_peak_memory_stats(device)[1] == 0
 

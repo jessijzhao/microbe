@@ -21,16 +21,16 @@ def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
         max_memory_allocated before resetting the statistics and
         memory_allocated, both in bytes
     """
-    if torch.cuda.is_available():
-        prev_max_memory = torch.cuda.max_memory_allocated(device)
-        memory_allocated = torch.cuda.memory_allocated(device)
+    assert torch.cuda.is_available()
+    prev_max_memory = torch.cuda.max_memory_allocated(device)
+    memory_allocated = torch.cuda.memory_allocated(device)
 
-        if prev_max_memory != memory_allocated and prev_max_memory > 0:
-            # raises RuntimeError if no previous allocation occurred
-            torch.cuda.reset_peak_memory_stats(device)
-            assert torch.cuda.max_memory_allocated(device) == memory_allocated
+    if prev_max_memory != memory_allocated and prev_max_memory > 0:
+        # raises RuntimeError if no previous allocation occurred
+        torch.cuda.reset_peak_memory_stats(device)
+        assert torch.cuda.max_memory_allocated(device) == memory_allocated
 
-        return prev_max_memory, memory_allocated
+    return prev_max_memory, memory_allocated
 
 
 def get_layer_set(layer: str) -> str:

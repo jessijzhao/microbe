@@ -9,7 +9,7 @@ skipifnocuda = pytest.mark.skipif(
 )
 
 
-def get_n_byte_tensor(n: int, device: torch.device = device) -> torch.tensor:
+def get_n_byte_tensor(n: int, device: torch.device = device) -> torch.Tensor:
     """Returns a torch.int8 tensor of size n.
 
     Args:
