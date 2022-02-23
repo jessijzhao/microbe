@@ -7,7 +7,7 @@ import pytest
 import torch
 from helpers import get_n_byte_tensor, skipifnocuda
 
-from utils import device, get_layer_set, get_path, reset_peak_memory_stats, save_results
+from utils import get_layer_set, get_path, reset_peak_memory_stats, save_results
 
 
 @pytest.mark.parametrize(
@@ -57,9 +57,11 @@ def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int) ->
         prev_max_memory: current maximum memory stat to simulate
         allocated_memory: current allocated memory to simulate
     """
+    device = torch.device("cuda:0")
+
     # keep x, delete y
-    x = get_n_byte_tensor(allocated_memory)
-    y = get_n_byte_tensor(prev_max_memory - allocated_memory)
+    x = get_n_byte_tensor(allocated_memory, device=device)
+    y = get_n_byte_tensor(prev_max_memory - allocated_memory, device=device)
     del y
 
     # get the true allocated memory (CUDA memory is allocated in blocks)

@@ -2,14 +2,12 @@ import pytest
 import torch
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 skipifnocuda = pytest.mark.skipif(
     not torch.cuda.is_available(), reason="Requires CUDA."
 )
 
 
-def get_n_byte_tensor(n: int, device: torch.device = device) -> torch.Tensor:
+def get_n_byte_tensor(n: int, device: torch.device) -> torch.Tensor:
     """Returns a torch.int8 tensor of size n.
 
     Args:
@@ -25,7 +23,7 @@ def get_n_byte_tensor(n: int, device: torch.device = device) -> torch.Tensor:
     return torch.zeros(n, dtype=torch.int8, device=device)
 
 
-def get_actual_memory_allocated(n: int, device: torch.device = device) -> int:
+def get_actual_memory_allocated(n: int, device: torch.device) -> int:
     """
     Returns the CUDA memory allocated for a torch.int8 tensor of size n.
 
@@ -40,7 +38,7 @@ def get_actual_memory_allocated(n: int, device: torch.device = device) -> int:
     """
     assert device.type == "cuda"
     prev_memory_allocated = torch.cuda.memory_allocated(device)
-    tensor = get_n_byte_tensor(n)
+    tensor = get_n_byte_tensor(n, device=device)
     memory_allocated = torch.cuda.memory_allocated(device)
     del tensor
     torch.cuda.reset_peak_memory_stats(device)

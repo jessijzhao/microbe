@@ -1,13 +1,14 @@
 import pickle
-from typing import Any, Dict, List, Tuple
+from collections import namedtuple
+from typing import Any, Dict, List
 
 import torch
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+Memory = namedtuple("Memory", "prev_max_mem, cur_mem")
 
 
-def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
+def reset_peak_memory_stats(device: torch.device) -> Memory:
     """Safely resets CUDA peak memory statistics of device if it is
     a CUDA device.
 
@@ -22,6 +23,7 @@ def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
         memory_allocated, both in bytes
     """
     assert torch.cuda.is_available()
+
     prev_max_memory = torch.cuda.max_memory_allocated(device)
     memory_allocated = torch.cuda.memory_allocated(device)
 
@@ -30,7 +32,7 @@ def reset_peak_memory_stats(device: torch.device) -> Tuple[int, int]:
         torch.cuda.reset_peak_memory_stats(device)
         assert torch.cuda.max_memory_allocated(device) == memory_allocated
 
-    return prev_max_memory, memory_allocated
+    return Memory(prev_max_memory, memory_allocated)
 
 
 def get_layer_set(layer: str) -> str:

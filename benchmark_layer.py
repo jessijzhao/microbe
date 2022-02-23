@@ -6,7 +6,7 @@ import torch
 import torch.utils.benchmark as benchmark
 
 from layers import LayerFactory, LayerType
-from utils import device, get_layer_set, reset_peak_memory_stats
+from utils import Memory, get_layer_set, reset_peak_memory_stats
 
 
 TIME_FACTOR = 1e3  # ms (milliseconds)
@@ -20,10 +20,12 @@ def run_layer_benchmark(
     forward_only: bool,
     create_layer: Callable = LayerFactory.create,
     **kwargs,
-) -> Tuple[float, int, int]:
+) -> Tuple[float, Memory]:
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     if torch.cuda.is_available():
-        assert reset_peak_memory_stats(device)[1] == 0
+        assert reset_peak_memory_stats(device).cur_mem == 0
 
     # setup layer
     layer_fun = create_layer(
@@ -33,18 +35,12 @@ def run_layer_benchmark(
     )
 
     if forward_only:
-        layer_fun.eval()
         benchmark_fun = layer_fun.forward_only
     else:
-        layer_fun.train()
         benchmark_fun = layer_fun.forward_backward
 
     # get memory allocated and reset memory statistics
-    layer_memory = (
-        reset_peak_memory_stats(device)[1]
-        if torch.cuda.is_available()
-        else float("nan")
-    )
+    memory_stats = layer_fun.to(device=device, forward_only=forward_only)
 
     # benchmark.Timer performs its own warmups
     timer = benchmark.Timer(
@@ -53,13 +49,9 @@ def run_layer_benchmark(
     runtime = timer.timeit(num_repeats).mean
 
     # get max memory allocated and reset memory statistics
-    max_memory = (
-        reset_peak_memory_stats(device)[0]
-        if torch.cuda.is_available()
-        else float("nan")
-    )
+    memory_stats["max_memory"] = reset_peak_memory_stats(device).prev_max_mem
 
-    return runtime, layer_memory, max_memory
+    return runtime, memory_stats
 
 
 def main(args) -> None:
@@ -67,14 +59,18 @@ def main(args) -> None:
     with open(args.config_file) as config_file:
         config = json.load(config_file)
 
-    runtime, layer_memory, max_memory = run_layer_benchmark(
+    runtime, memory_stats = run_layer_benchmark(
         layer_name=args.layer,
         batch_size=args.batch_size,
         num_repeats=args.num_repeats,
         forward_only=args.forward_only,
         **config[get_layer_set(args.layer)],
     )
-    print(runtime * TIME_FACTOR, layer_memory * MEM_FACTOR, max_memory * MEM_FACTOR)
+    print(
+        runtime * TIME_FACTOR,
+        memory_stats["layer"] * MEM_FACTOR,
+        memory_stats["max_memory"] * MEM_FACTOR,
+    )
 
 
 if __name__ == "__main__":

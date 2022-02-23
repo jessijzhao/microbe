@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from opacus.grad_sample import GradSampleModule
 from opacus.layers import DPGRU, DPLSTM, DPRNN, DPMultiheadAttention
 
+from utils import reset_peak_memory_stats
+
 
 class LayerType:
     LINEAR: str = "linear"
@@ -53,20 +55,29 @@ class LayerFactory:
             self._labels: torch.Tensor = torch.zeros(batch_size)
 
         def to(
-            self, device: Optional[torch.device], forward_only: bool = False
-        ) -> Dict[str, float]:
-            self._layer.to(device)
-            for item in self._layer_inputs:
-                item.to(device)
-            if not forward_only:
-                self._labels.to(device)
-            return {}
+            self, device: torch.device, forward_only: bool = False
+        ) -> Dict[str, int]:
+            assert reset_peak_memory_stats(device).cur_mem == 0
 
-        def prepare_layer(self, forward_only: bool = False) -> None:
+            res = {}
+
+            self._layer = self._layer.to(device)
+            res["layer"] = torch.cuda.memory_allocated(device)
+
+            self._layer_inputs = [item.to(device) for item in self._layer_inputs]
+            res["inputs"] = torch.cuda.memory_allocated(device) - res["layer"]
+
             if forward_only:
                 self._layer.eval()
             else:
+                self._labels = self._labels.to(device)
+                res["labels"] = (
+                    torch.cuda.memory_allocated(device) - res["layer"] - res["inputs"]
+                )
+
                 self._layer.train()
+
+            return res
 
         def forward_only(self) -> torch.Tensor:
             return self._layer(*self._layer_inputs)
