@@ -48,7 +48,8 @@ class LayerFactory:
             criterion: Callable = F.cross_entropy,
             **kwargs,
         ):
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self._criterion: Callable = criterion
             self._layer: nn.Module = nn.Module()
             self._layer_inputs: List[Any] = [torch.zeros(batch_size)]
@@ -103,7 +104,8 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self.input_tensor = torch.randn(batch_size, *input_shape, in_features)
             self._layer_inputs = [self.input_tensor]
             self._layer = nn.Linear(
@@ -131,7 +133,8 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             D = len(input_shape)
             if D == 1:
                 self._layer_name = nn.Conv1d
@@ -170,7 +173,8 @@ class LayerFactory:
             elementwise_affine: bool = True,
             random_seed: Optional[int] = None,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self.input_tensor = torch.randn(batch_size, *input_shape)
             self._layer_inputs = [self.input_tensor]
             self._layer = nn.LayerNorm(
@@ -192,7 +196,8 @@ class LayerFactory:
             track_running_stats: bool = False,
             random_seed: Optional[int] = None,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             D = len(input_shape)
             if D == 1:
                 self._layer_name = nn.InstanceNorm1d
@@ -225,7 +230,8 @@ class LayerFactory:
             affine: bool = True,
             random_seed: Optional[int] = None,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self.input_tensor = torch.randn(batch_size, num_channels, *input_shape)
             self._layer_inputs = [self.input_tensor]
             self._layer = nn.GroupNorm(
@@ -248,7 +254,8 @@ class LayerFactory:
             sparse: bool = False,
             random_seed: Optional[int] = None,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self.input_tensor = torch.randint(
                 high=num_embeddings,
                 size=(batch_size, *input_shape),
@@ -267,6 +274,8 @@ class LayerFactory:
             self.labels = torch.randn(batch_size, *input_shape, embedding_dim)
 
     class CLayer(Layer):
+        """Some layers return multiple tensors."""
+
         def forward_only(self) -> torch.Tensor:
             return self._layer(*self._layer_inputs)[0]
 
@@ -289,7 +298,8 @@ class LayerFactory:
             batch_first: bool = False,
             random_seed: Optional[int] = None,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             kdim = kdim if kdim else embed_dim
             vdim = vdim if vdim else embed_dim
 
@@ -343,7 +353,8 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             **kwargs,
         ) -> None:
-            torch.manual_seed(random_seed)
+            if random_seed is not None:
+                torch.manual_seed(random_seed)
             self.input_tensor = (
                 torch.randn(
                     seq_len,

@@ -22,8 +22,6 @@ def reset_peak_memory_stats(device: torch.device) -> Memory:
         max_memory_allocated before resetting the statistics and
         memory_allocated, both in bytes
     """
-    assert torch.cuda.is_available()
-
     prev_max_memory = torch.cuda.max_memory_allocated(device)
     memory_allocated = torch.cuda.memory_allocated(device)
 

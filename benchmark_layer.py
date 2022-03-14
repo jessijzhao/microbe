@@ -1,12 +1,12 @@
 import argparse
 import json
-from typing import Callable, Tuple
+from typing import Callable, Dict, Tuple
 
 import torch
 import torch.utils.benchmark as benchmark
 
 from layers import LayerFactory, LayerType
-from utils import Memory, get_layer_set, reset_peak_memory_stats
+from utils import get_layer_set, reset_peak_memory_stats
 
 
 TIME_FACTOR = 1e3  # ms (milliseconds)
@@ -20,7 +20,7 @@ def run_layer_benchmark(
     forward_only: bool,
     create_layer: Callable = LayerFactory.create,
     **kwargs,
-) -> Tuple[float, Memory]:
+) -> Tuple[float, Dict[str, int]]:
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

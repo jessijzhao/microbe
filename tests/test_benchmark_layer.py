@@ -27,7 +27,7 @@ class FakeLayer(LayerFactory.Layer):
     def __init__(self, **kwargs) -> None:
         self._runtime = kwargs.get("runtime", 0)
         self._pass_memory = kwargs.get("pass_memory", 0)
-        self._layer = get_n_byte_tensor(kwargs.get("layer_memory", 0), device=None)
+        self._layer = get_n_byte_tensor(kwargs.get("layer_memory", 0))
 
     def to(self, device: torch.device, forward_only: bool = False) -> Dict[str, int]:
         assert reset_peak_memory_stats(device).cur_mem == 0
@@ -121,7 +121,7 @@ def test_memory_benchmark(
             for num_repeats in NUM_REPEATS:
                 for forward_only in [False, True]:
                     # reset memory stats and ensure there is no memory leakage
-                    assert reset_peak_memory_stats(device)[1] == 0
+                    assert reset_peak_memory_stats(device).cur_mem == 0
 
                     runtime, memory_stats = run_layer_benchmark(
                         layer_name="",
