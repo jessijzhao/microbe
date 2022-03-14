@@ -64,6 +64,7 @@ def get_path(
     batch_size: int,
     num_runs: int,
     num_repeats: int,
+    forward_only: bool = False,
     root: str = "./results/raw/",
 ) -> str:
     """Gets the path to the file where the corresponding results are located.
@@ -74,11 +75,15 @@ def get_path(
         batch_size: batch size
         num_runs: number of runs per benchmark
         num_repeats: how many benchmarks were run
+        forward_only: whether backward passes were skipped
+        root: directory to write results to
 
     Returns:
         Path to results pickle file
     """
     pickle_name = f"{layer}_bs_{batch_size}_runs_{num_runs}_repeats_{num_repeats}"
+    if forward_only:
+        pickle_name.append("_forward_only")
     return f"{root}{pickle_name}.pkl"
 
 
@@ -88,7 +93,8 @@ def save_results(
     num_runs: int,
     num_repeats: int,
     results: List[Dict[str, Any]],
-    config: Dict,
+    config: Dict[str, Any],
+    forward_only: bool = False,
     root: str = "./results/raw/",
 ) -> None:
     """Saves the corresponding results as a pickle file.
@@ -101,12 +107,15 @@ def save_results(
         runtimes: list of runtimes of length num_repeats
         memory: list of memory stats of length num_repeats
         config: layer config
+        forward_only: whether backward passes were skipped
+        root: directory to write results to
     """
     path = get_path(
         layer=layer,
         batch_size=batch_size,
         num_runs=num_runs,
         num_repeats=num_repeats,
+        forward_only=forward_only,
         root=root,
     )
 
@@ -117,6 +126,7 @@ def save_results(
                 "batch_size": batch_size,
                 "num_runs": num_runs,
                 "num_repeats": num_repeats,
+                "forward_only": forward_only,
                 "results": results,
                 "config": config,
             },

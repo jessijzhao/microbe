@@ -85,8 +85,14 @@ def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int) ->
             "./results/raw/linear_bs_64_runs_10_repeats_100.pkl",
         ),
         (
-            {"layer": "gsm_rnn", "batch_size": 128, "num_runs": 5, "num_repeats": 20},
-            "./results/raw/gsm_rnn_bs_128_runs_5_repeats_20.pkl",
+            {
+                "layer": "gsm_rnn",
+                "batch_size": 128,
+                "num_runs": 5,
+                "num_repeats": 20,
+                "forward_only": True,
+            },
+            "./results/raw/gsm_rnn_bs_128_runs_5_repeats_20_forward_only.pkl",
         ),
     ],
 )
