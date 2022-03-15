@@ -1,6 +1,8 @@
+import random
 from typing import Any, Dict, List, Tuple
 
 import pytest
+import torch
 import torch.nn as nn
 from opacus.grad_sample import GradSampleModule
 from opacus.layers import DPGRU, DPLSTM, DPRNN, DPMultiheadAttention
@@ -9,7 +11,7 @@ from layers import LayerFactory
 
 
 @pytest.mark.parametrize(
-    "layers, layer_config",
+    "layer_list, layer_config",
     [
         (
             [("linear", nn.Linear), ("gsm_linear", nn.Linear)],
@@ -73,24 +75,46 @@ from layers import LayerFactory
     ],
 )
 def test_layers(
-    layers: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
+    layer_list: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
 ) -> None:
     """For each supported layer, tests that it is instantiated with the correct module
-    and DP support
+    and DP support. Layers in layer_list that share the same underlying module (either
+    torch.nn.Module or opacus.layers.DPModule) should produce the same output given the
+    same random seed and different outputs given different random seeds.
 
     Args:
-        layers: list of tuples of form (layer_name, module)
+        layer_list: list of tuples of form (layer_name, module)
         layer_config: config for instantiating the layer
     """
-    for layer_name, module in layers:
-        layer = LayerFactory.create(
-            layer_name=layer_name,
-            batch_size=64,
-            **layer_config,
-        )
+    random_seed_a = random.randint(0, 100000)
+    random_seed_b = random.randint(100000, 200000)
+    outputs: Dict[int, Dict[str, torch.Tensor]] = {
+        random_seed_a: {},
+        random_seed_b: {},
+    }
 
-    if "gsm" in layer_name:
-        assert isinstance(layer._layer, GradSampleModule)
-        assert isinstance(layer._layer.to_standard_module(), module)
-    else:
-        assert isinstance(layer._layer, module)
+    for random_seed in (random_seed_a, random_seed_b):
+        for layer_name, module in layer_list:
+            layer = LayerFactory.create(
+                layer_name=layer_name,
+                batch_size=64,
+                random_seed=random_seed,
+                **layer_config,
+            )
+            if str(module) not in outputs[random_seed]:
+                outputs[random_seed][str(module)] = layer.forward_only()
+
+            # same module with same seed should result in same output
+            assert torch.equal(outputs[random_seed][str(module)], layer.forward_only())
+
+            if "gsm" in layer_name:
+                assert isinstance(layer._layer, GradSampleModule)
+                assert isinstance(layer._layer.to_standard_module(), module)
+            else:
+                assert isinstance(layer._layer, module)
+
+    # same module with different seed should result in different output
+    for module in outputs[random_seed_a]:
+        assert not torch.equal(
+            outputs[random_seed_a][str(module)], outputs[random_seed_b][str(module)]
+        )

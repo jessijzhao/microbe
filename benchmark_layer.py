@@ -80,7 +80,7 @@ if __name__ == "__main__":
         "layer",
         choices=[v for k, v in LayerType.__dict__.items() if not k.startswith("__")],
     )
-    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--batch_size", default=64, type=int)
     parser.add_argument(
         "--num_repeats",
         default=20,
@@ -90,5 +90,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forward_only", action="store_true", help="only run forward passes"
     )
+    parser.add_argument("--random_seed", type=int)
     args = parser.parse_args()
     main(args)

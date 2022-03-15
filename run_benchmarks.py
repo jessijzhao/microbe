@@ -112,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forward_only", action="store_true", help="only run forward passes"
     )
+    parser.add_argument("--random_seed", type=int)
     parser.add_argument(
         "--cont", action="store_true", help="only run missing experiments"
     )
