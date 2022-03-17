@@ -14,13 +14,12 @@ MEM_FACTOR = 1e-9  # GB (gigabytes)
 
 
 def run_layer_benchmark(
-    layer_name: LayerType,
-    batch_size: int,
     num_repeats: int,
     forward_only: bool,
     create_layer: Callable = LayerFactory.create,
     **kwargs,
 ) -> Tuple[float, Dict[str, int]]:
+    """Benchmark a layer for runtime and memory"""
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -28,11 +27,7 @@ def run_layer_benchmark(
         assert reset_peak_memory_stats(device).cur_mem == 0
 
     # setup layer
-    layer_fun = create_layer(
-        layer_name=layer_name,
-        batch_size=batch_size,
-        **kwargs,
-    )
+    layer_fun = create_layer(**kwargs)
 
     if forward_only:
         benchmark_fun = layer_fun.forward_only
@@ -60,10 +55,10 @@ def main(args) -> None:
         config = json.load(config_file)
 
     runtime, memory_stats = run_layer_benchmark(
-        layer_name=args.layer,
-        batch_size=args.batch_size,
         num_repeats=args.num_repeats,
         forward_only=args.forward_only,
+        layer_name=args.layer,
+        batch_size=args.batch_size,
         **config[get_layer_set(args.layer)],
     )
     print(

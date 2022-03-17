@@ -3,7 +3,7 @@ import json
 import logging
 import subprocess
 from os.path import exists
-from typing import Any, Dict
+from typing import Dict, List
 
 from layers import LayerType
 from utils import get_layer_set, get_path, save_results
@@ -12,7 +12,7 @@ from utils import get_layer_set, get_path, save_results
 logger = logging.getLogger(__name__)
 
 
-def run_benchmark(layer: LayerType, batch_size: int, args) -> Dict[str, Any]:
+def run_benchmark(layer: LayerType, batch_size: int, args) -> List[Dict[str, float]]:
     results = []
 
     for _ in range(args.num_runs):

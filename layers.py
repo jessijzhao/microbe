@@ -177,6 +177,7 @@ class LayerFactory:
             eps: float = 1e-05,
             elementwise_affine: bool = True,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)
@@ -202,6 +203,7 @@ class LayerFactory:
             affine: bool = False,
             track_running_stats: bool = False,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)
@@ -238,6 +240,7 @@ class LayerFactory:
             eps: float = 1e-05,
             affine: bool = True,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)
@@ -264,6 +267,7 @@ class LayerFactory:
             scale_grad_by_freq: bool = False,
             sparse: bool = False,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)
@@ -310,6 +314,7 @@ class LayerFactory:
             vdim: Optional[int] = None,
             batch_first: bool = False,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)
@@ -366,6 +371,7 @@ class LayerFactory:
             dropout: float = 0,
             bidirectional: bool = False,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
             **kwargs,
         ) -> None:
             if random_seed is not None:
@@ -419,6 +425,7 @@ class LayerFactory:
             bidirectional: bool = False,
             proj_size: int = 0,
             random_seed: Optional[int] = None,
+            criterion: Callable = F.cross_entropy,
         ) -> None:
             if random_seed is not None:
                 torch.manual_seed(random_seed)

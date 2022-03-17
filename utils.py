@@ -83,7 +83,7 @@ def get_path(
     """
     pickle_name = f"{layer}_bs_{batch_size}_runs_{num_runs}_repeats_{num_repeats}"
     if forward_only:
-        pickle_name.append("_forward_only")
+        pickle_name += "_forward_only"
     return f"{root}{pickle_name}.pkl"
 
 
@@ -92,7 +92,7 @@ def save_results(
     batch_size: int,
     num_runs: int,
     num_repeats: int,
-    results: List[Dict[str, Any]],
+    results: List[Dict[str, float]],
     config: Dict[str, Any],
     forward_only: bool = False,
     root: str = "./results/raw/",
