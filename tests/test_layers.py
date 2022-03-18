@@ -1,13 +1,16 @@
+import copy
 import random
 from typing import Any, Dict, List, Tuple
 
 import pytest
 import torch
 import torch.nn as nn
+from helpers import skipifnocuda
 from opacus.grad_sample import GradSampleModule
 from opacus.layers import DPGRU, DPLSTM, DPRNN, DPMultiheadAttention
 
 from layers import LayerFactory
+from utils import reset_peak_memory_stats
 
 
 PARAMETERS = [
@@ -72,18 +75,77 @@ PARAMETERS = [
     ),
 ]
 
+
 @pytest.mark.parametrize("layer_list, layer_config", PARAMETERS)
 def test_layer_modules(
     layer_list: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
 ) -> None:
     """For each supported layer, tests that it is instantiated with the correct module
-    and DP support. Layers in layer_list that share the same underlying module (either
-    torch.nn.Module or opacus.layers.DPModule) should produce the same output given the
-    same random seed and different outputs given different random seeds.
+    and DP support.
 
     Args:
         layer_list: list of tuples of form (layer_name, module)
-        layer_config: config for instantiating the layer
+        layer_config: config for instantiating the layers in layer_list
+    """
+    for layer_name, module in layer_list:
+        layer = LayerFactory.create(
+            layer_name=layer_name,
+            batch_size=64,
+            **layer_config,
+        )
+
+        if "gsm" in layer_name:
+            assert isinstance(layer.module, GradSampleModule)
+            assert isinstance(layer.module.to_standard_module(), module)
+        else:
+            assert isinstance(layer.module, module)
+
+
+@skipifnocuda
+@pytest.mark.parametrize("layer_list, layer_config", PARAMETERS)
+def test_to_device(
+    layer_list: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
+) -> None:
+    """Tests that inputs, labels, and module are initialized on CPU, and that moving
+    them to GPU and CPU works correctly.
+
+    Args:
+        layer_list: list of tuples of form (layer_name, module)
+        layer_config: config for instantiating the layers in layer_list
+    """
+    cuda = torch.device("cuda:0")
+    cpu = torch.device("cpu")
+    assert reset_peak_memory_stats(cuda).cur_mem == 0
+
+    for layer_name, module in layer_list:
+        layer = LayerFactory.create(
+            layer_name=layer_name,
+            batch_size=64,
+            **layer_config,
+        )
+        # layer should be initialized on CPU
+        assert torch.cuda.memory_allocated(cuda) == 0
+
+        layer.to(cuda)
+        assert torch.cuda.memory_allocated(cuda) > 0
+
+        layer.to(cpu)
+        assert torch.cuda.memory_allocated(cuda) == 0
+
+    assert reset_peak_memory_stats(cuda).cur_mem == 0
+
+
+@pytest.mark.parametrize("layer_list, layer_config", PARAMETERS)
+def test_layer_outputs(
+    layer_list: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
+) -> None:
+    """Layers in layer_list that share the same underlying module (either a
+    torch.nn.Module or opacus.layers.DPModule) should produce the same output
+    given the same random seed and different outputs given different random seeds.
+
+    Args:
+        layer_list: list of tuples of form (layer_name, module)
+        layer_config: config for instantiating the layers in layer_list
     """
     random_seed_a = random.randint(0, 100000)
     random_seed_b = random.randint(100000, 200000)
@@ -106,14 +168,31 @@ def test_layer_modules(
             # same module with same seed should result in same output
             assert torch.equal(outputs[random_seed][str(module)], layer.forward_only())
 
-            if "gsm" in layer_name:
-                assert isinstance(layer._layer, GradSampleModule)
-                assert isinstance(layer._layer.to_standard_module(), module)
-            else:
-                assert isinstance(layer._layer, module)
-
     # same module with different seed should result in different output
-    for module in outputs[random_seed_a]:
+    for module_name in outputs[random_seed_a]:
         assert not torch.equal(
-            outputs[random_seed_a][str(module)], outputs[random_seed_b][str(module)]
+            outputs[random_seed_a][module_name], outputs[random_seed_b][module_name]
         )
+
+
+@pytest.mark.parametrize("layer_list, layer_config", PARAMETERS)
+def test_forward_backward(
+    layer_list: List[Tuple[str, nn.Module]], layer_config: Dict[str, Any]
+) -> None:
+    """Tests that Layer.forward_backward() runs for each layer in layer_list and that
+    the Layer is not modified.
+
+    Args:
+        layer_list: list of tuples of form (layer_name, module)
+        layer_config: config for instantiating the layers in layer_list
+    """
+    for layer_name, module in layer_list:
+        layer = LayerFactory.create(
+            layer_name=layer_name,
+            batch_size=64,
+            **layer_config,
+        )
+        layer_copy = copy.deepcopy(layer)
+        layer.forward_backward()
+        for p1, p2 in zip(layer.module.parameters(), layer_copy.module.parameters()):
+            assert torch.equal(p1.data, p2.data)

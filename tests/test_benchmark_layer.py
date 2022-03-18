@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import pytest
 import torch
+import torch.nn as nn
 from helpers import get_actual_memory_allocated, get_n_byte_tensor, skipifnocuda
 
 from benchmark_layer import run_layer_benchmark
@@ -13,6 +14,16 @@ from utils import reset_peak_memory_stats
 
 # number of repeats to test runtime and memory benchmarks for
 NUM_REPEATS = [10, 20, 50]
+
+
+class FakeModule(nn.Module):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self._runtime = kwargs.get("runtime", 0)
+        self._pass_memory = kwargs.get("pass_memory", 0)
+        self._parameters = {
+            "fake_param": get_n_byte_tensor(kwargs.get("layer_memory", 0))
+        }
 
 
 class FakeLayer(LayerFactory.Layer):
@@ -27,12 +38,13 @@ class FakeLayer(LayerFactory.Layer):
     def __init__(self, **kwargs) -> None:
         self._runtime = kwargs.get("runtime", 0)
         self._pass_memory = kwargs.get("pass_memory", 0)
-        self._layer = get_n_byte_tensor(kwargs.get("layer_memory", 0))
+        self._module = FakeModule(**kwargs)
 
-    def to(self, device: torch.device, forward_only: bool = False) -> Dict[str, int]:
-        assert reset_peak_memory_stats(device).cur_mem == 0
-        self._layer = self._layer.to(device)
-        return {"layer": torch.cuda.memory_allocated(device)}
+    def to(self, device: torch.device) -> Dict[str, int]:
+        self._module = self._module.to(device)
+        return {
+            "layer": torch.cuda.memory_allocated(device) if device.type == "cuda" else 0
+        }
 
     def forward_only(self) -> torch.Tensor:
         """Wait for self.duration and allocate self.max_memory bytes"""

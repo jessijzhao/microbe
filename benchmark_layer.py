@@ -30,12 +30,14 @@ def run_layer_benchmark(
     layer_fun = create_layer(**kwargs)
 
     if forward_only:
+        layer_fun.module.eval()
         benchmark_fun = layer_fun.forward_only
     else:
+        layer_fun.module.train()
         benchmark_fun = layer_fun.forward_backward
 
     # get memory allocated and reset memory statistics
-    memory_stats = layer_fun.to(device=device, forward_only=forward_only)
+    memory_stats = layer_fun.to(device=device)
 
     # benchmark.Timer performs its own warmups
     timer = benchmark.Timer(
