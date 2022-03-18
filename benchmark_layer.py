@@ -61,6 +61,7 @@ def main(args) -> None:
         forward_only=args.forward_only,
         layer_name=args.layer,
         batch_size=args.batch_size,
+        random_seed=args.random_seed
         **config[get_layer_set(args.layer)],
     )
     print(

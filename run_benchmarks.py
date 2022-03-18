@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 def run_benchmark(layer: LayerType, batch_size: int, args) -> List[Dict[str, float]]:
     results = []
 
-    for _ in range(args.num_runs):
-        cmd = f"CUDA_VISIBLE_DEVICES=0 python3 -W ignore benchmark_layer.py {layer} --batch_size {batch_size} -c {args.config_file} --num_repeats {args.num_repeats}"
+    for i in range(args.num_runs):
+        cmd = f"CUDA_VISIBLE_DEVICES=0 python3 -W ignore benchmark_layer.py {layer} --batch_size {batch_size} -c {args.config_file} --num_repeats {args.num_repeats} --random_seed {args.random_seeds[i % len(args.random_seeds)]}"
         if args.forward_only:
             cmd += " --forward_only"
 
@@ -112,7 +112,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forward_only", action="store_true", help="only run forward passes"
     )
-    parser.add_argument("--random_seed", type=int)
+    parser.add_argument(
+        "--random_seeds",
+        nargs="+",
+        type=int,
+        help="random seeds to use for runs. If len(random_seeds) < num_runs, start reusing seeds from the beginning.",
+    )
     parser.add_argument(
         "--cont", action="store_true", help="only run missing experiments"
     )
