@@ -50,7 +50,7 @@ class LayerFactory:
             self._module: nn.Module = nn.Module()
             self._labels: torch.Tensor = torch.zeros(batch_size)
 
-        def _set_shared_attributes(
+        def _set_common_attributes(
             self,
             *,
             random_seed: Optional[int] = None,
@@ -149,7 +149,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
             self._input_tensor = torch.randn(batch_size, *input_shape, in_features)
             self._module = nn.Linear(
                 in_features=in_features,
@@ -176,7 +176,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             D = len(input_shape)
             if D == 1:
@@ -216,7 +216,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             self._input_tensor = torch.randn(batch_size, *input_shape)
             self._module = nn.LayerNorm(
@@ -239,7 +239,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             D = len(input_shape)
             if D == 1:
@@ -273,7 +273,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             self._input_tensor = torch.randn(batch_size, num_channels, *input_shape)
             self._module = nn.GroupNorm(
@@ -297,7 +297,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             self._input_tensor = torch.randint(
                 high=num_embeddings,
@@ -335,7 +335,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             kdim = kdim if kdim else embed_dim
             vdim = vdim if vdim else embed_dim
@@ -403,7 +403,7 @@ class LayerFactory:
             criterion: Callable = F.cross_entropy,
             **kwargs,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             self._input_tensor = (
                 torch.randn(
@@ -463,7 +463,7 @@ class LayerFactory:
             random_seed: Optional[int] = None,
             criterion: Callable = F.cross_entropy,
         ) -> None:
-            self._set_shared_attributes(random_seed=random_seed, criterion=criterion)
+            self._set_common_attributes(random_seed=random_seed, criterion=criterion)
 
             super().__init__(
                 layer=layer,
