@@ -126,11 +126,16 @@ def test_to_device(
         # layer should be initialized on CPU
         assert torch.cuda.memory_allocated(cuda) == 0
 
-        layer.to(cuda)
-        assert torch.cuda.memory_allocated(cuda) > 0
+        mem_stats = layer.to(cuda)
+        allocated = torch.cuda.memory_allocated(cuda)
+        assert allocated > 0
+        # all allocated memory should be accounted for in the memory statistics
+        assert allocated == sum(v for _, v in mem_stats.items())
 
-        layer.to(cpu)
-        assert torch.cuda.memory_allocated(cuda) == 0
+        mem_stats = layer.to(cpu)
+        allocated = torch.cuda.memory_allocated(cuda)
+        assert allocated == 0
+        assert allocated == sum(v for _, v in mem_stats.items())
 
     assert reset_peak_memory_stats(cuda).cur_mem == 0
 

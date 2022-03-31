@@ -80,11 +80,23 @@ class LayerFactory:
                 return torch.cuda.memory_allocated(device) - sum(stats.values())
             return 0
 
-        def _additional_inputs_to(
+        def _inputs_to(
             self, device: torch.device, stats: Dict[str, int]
         ) -> Dict[str, int]:
             """Some modules (e.g. RNNs) take additional layer inputs such as initial
-            hidden state. These modules should override this function accordingly."""
+            hidden state. These modules should override this function accordingly.
+
+            Args:
+                device: torch.device
+                stats: dictionary from item names (e.g. input_tensor, module, labels)
+                to their respective sizes
+
+            Returns: updated stats dictionary with input tensor sizes
+            """
+            self._input_tensor = self._input_tensor.to(device)
+            stats["input_tensor"] = self._get_memory_difference(
+                device=device, stats=stats
+            )
             return stats
 
         def to(self, device: torch.device) -> Dict[str, int]:
@@ -101,13 +113,8 @@ class LayerFactory:
             stats: Dict[str, int] = {}
             stats["offset"] = self._get_memory_difference(device=device, stats=stats)
 
-            self._input_tensor = self._input_tensor.to(device)
-            stats["input_tensor"] = self._get_memory_difference(
-                device=device, stats=stats
-            )
-
             # some modules take additional inputs such as hidden state
-            stats = self._additional_inputs_to(device=device, stats=stats)
+            stats = self._inputs_to(device=device, stats=stats)
 
             self._module = self._module.to(device)
             stats["layer"] = self._get_memory_difference(device=device, stats=stats)
@@ -371,15 +378,23 @@ class LayerFactory:
                 else torch.randn(batch_size, targ_seq_len, embed_dim)
             )
 
-        def _additional_inputs_to(
+        def _inputs_to(
             self, device: torch.device, stats: Dict[str, int]
         ) -> Dict[str, int]:
+            """MultiheadAttention takes additional layer inputs key and value.
+
+            Args:
+                device: torch.device
+                stats: dictionary from item names (e.g. input_tensor, module, labels)
+                to their respective sizes
+
+            Returns: updated stats dictionary with input tensor, key, and value size
+            """
+            stats = super()._inputs_to(device=device, stats=stats)
             self._key = self._key.to(device)
             stats["key"] = self._get_memory_difference(device=device, stats=stats)
-
             self._value = self._value.to(device)
             stats["value"] = self._get_memory_difference(device=device, stats=stats)
-
             return stats
 
         def forward_only(self) -> torch.Tensor:
@@ -435,9 +450,19 @@ class LayerFactory:
                 else torch.randn(batch_size, seq_len, D * hidden_size)
             )
 
-        def _additional_inputs_to(
+        def _inputs_to(
             self, device: torch.device, stats: Dict[str, int]
         ) -> Dict[str, int]:
+            """RNNs take additional layer inputs h_0.
+
+            Args:
+                device: torch.device
+                stats: dictionary from item names (e.g. input_tensor, module, labels)
+                to their respective sizes
+
+            Returns: updated stats dictionary with input tensor and h_0 size
+            """
+            stats = super()._inputs_to(device=device, stats=stats)
             self._h_0 = self._h_0.to(device)
             stats["h_0"] = self._get_memory_difference(device=device, stats=stats)
             return stats
@@ -489,9 +514,19 @@ class LayerFactory:
                 else torch.randn(batch_size, seq_len, D * h_out)
             )
 
-        def _additional_inputs_to(
+        def _inputs_to(
             self, device: torch.device, stats: Dict[str, int]
         ) -> Dict[str, int]:
+            """LSTMs take additional layer inputs h_0, c_0.
+
+            Args:
+                device: torch.device
+                stats: dictionary from item names (e.g. input_tensor, module, labels)
+                to their respective sizes
+
+            Returns: updated stats dictionary with input tensor, h_0, and c_0 size
+            """
+            stats = super()._inputs_to(device=device, stats=stats)
             self._h_0 = self._h_0.to(device)
             stats["h_0"] = self._get_memory_difference(device=device, stats=stats)
 
