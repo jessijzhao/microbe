@@ -78,7 +78,7 @@ def test_runtime_benchmark(
         runtime=duration,
     )
     # account for small variations
-    assert abs(runtime - ((2 - forward_only) * duration)) < 0.002
+    assert abs(runtime - ((2 - forward_only) * duration)) < 0.01
 
     # check that no memory allocation took place
     assert memory_stats["layer"] == 0 and memory_stats["max_memory"] == 0
