@@ -1,6 +1,6 @@
 import pickle
 from collections import namedtuple
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import torch
 
@@ -64,6 +64,7 @@ def get_path(
     batch_size: int,
     num_runs: int,
     num_repeats: int,
+    random_seed: Optional[int] = None,
     forward_only: bool = False,
     root: str = "./results/raw/",
 ) -> str:
@@ -75,13 +76,14 @@ def get_path(
         batch_size: batch size
         num_runs: number of runs per benchmark
         num_repeats: how many benchmarks were run
+        random_seed: the initial random seed
         forward_only: whether backward passes were skipped
         root: directory to write results to
 
     Returns:
         Path to results pickle file
     """
-    pickle_name = f"{layer}_bs_{batch_size}_runs_{num_runs}_repeats_{num_repeats}"
+    pickle_name = f"{layer}_bs_{batch_size}_runs_{num_runs}_repeats_{num_repeats}_seed_{random_seed}"
     if forward_only:
         pickle_name += "_forward_only"
     return f"{root}{pickle_name}.pkl"
@@ -94,6 +96,7 @@ def save_results(
     num_repeats: int,
     results: List[Dict[str, float]],
     config: Dict[str, Any],
+    random_seed: Optional[int] = None,
     forward_only: bool = False,
     root: str = "./results/raw/",
 ) -> None:
@@ -107,6 +110,7 @@ def save_results(
         runtimes: list of runtimes of length num_repeats
         memory: list of memory stats of length num_repeats
         config: layer config
+        random_seed: the initial random seed
         forward_only: whether backward passes were skipped
         root: directory to write results to
     """
@@ -115,6 +119,7 @@ def save_results(
         batch_size=batch_size,
         num_runs=num_runs,
         num_repeats=num_repeats,
+        random_seed=random_seed,
         forward_only=forward_only,
         root=root,
     )
@@ -126,6 +131,7 @@ def save_results(
                 "batch_size": batch_size,
                 "num_runs": num_runs,
                 "num_repeats": num_repeats,
+                "random_seed": random_seed,
                 "forward_only": forward_only,
                 "results": results,
                 "config": config,

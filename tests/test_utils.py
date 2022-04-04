@@ -82,7 +82,7 @@ def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int) ->
     [
         (
             {"layer": "linear", "batch_size": 64, "num_runs": 10, "num_repeats": 100},
-            "./results/raw/linear_bs_64_runs_10_repeats_100.pkl",
+            "./results/raw/linear_bs_64_runs_10_repeats_100_seed_None.pkl",
         ),
         (
             {
@@ -90,9 +90,10 @@ def test_reset_peak_memory_stats(prev_max_memory: int, allocated_memory: int) ->
                 "batch_size": 128,
                 "num_runs": 5,
                 "num_repeats": 20,
+                "random_seed": 13964,
                 "forward_only": True,
             },
-            "./results/raw/gsm_rnn_bs_128_runs_5_repeats_20_forward_only.pkl",
+            "./results/raw/gsm_rnn_bs_128_runs_5_repeats_20_seed_13964_forward_only.pkl",
         ),
     ],
 )
@@ -115,6 +116,7 @@ def test_get_path(config: Dict[str, Any], path: str) -> None:
                 "batch_size": 64,
                 "num_runs": 10,
                 "num_repeats": 100,
+                "random_seed": 13964,
                 "results": [],
                 "config": {},
             },
@@ -138,6 +140,7 @@ def test_save_results(config: Dict[str, Any], root: str) -> None:
             batch_size=config["batch_size"],
             num_runs=config["num_runs"],
             num_repeats=config["num_repeats"],
+            random_seed=config["random_seed"],
             root=root,
         ),
         "rb",
