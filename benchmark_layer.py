@@ -79,7 +79,6 @@ def main(args) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", type=str, default="config.json")
     parser.add_argument(
         "layer",
         choices=[v for k, v in LayerType.__dict__.items() if not k.startswith("__")],
@@ -95,5 +94,6 @@ if __name__ == "__main__":
         "--forward_only", action="store_true", help="only run forward passes"
     )
     parser.add_argument("--random_seed", default=0, type=int)
+    parser.add_argument("-c", "--config_file", type=str, default="config.json")
     args = parser.parse_args()
     main(args)

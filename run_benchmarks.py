@@ -98,13 +98,8 @@ def main(args) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", type=str, default="config.json")
-    parser.add_argument(
-        "--layers",
-        choices=[v for k, v in LayerType.__dict__.items() if not k.startswith("__")],
-        default="all",
-        nargs="+",
-    )
+    layers = [v for k, v in LayerType.__dict__.items() if not k.startswith("__")]
+    parser.add_argument("--layers", choices=layers, default=layers, nargs="+")
     parser.add_argument(
         "--batch_sizes",
         default=[16, 32, 64, 128, 256, 512, 1024, 2048],
@@ -120,7 +115,6 @@ if __name__ == "__main__":
         type=int,
         help="how many forward/backward passes per run",
     )
-    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument(
         "--forward_only", action="store_true", help="only run forward passes"
     )
@@ -130,9 +124,11 @@ if __name__ == "__main__":
         type=int,
         help="random seed for the first run of each layer, subsequent runs increase the random seed by 1",
     )
+    parser.add_argument("-c", "--config_file", type=str, default="config.json")
     parser.add_argument(
         "--cont", action="store_true", help="only run missing experiments"
     )
     parser.add_argument("--no_save", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     main(args)
