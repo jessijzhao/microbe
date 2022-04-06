@@ -28,20 +28,14 @@ def run_and_save_benchmark(
     results = []
 
     for i in range(args.num_runs):
-        try:
-            runtime, memory_stats = run_layer_benchmark(
-                num_repeats=args.num_repeats,
-                forward_only=args.forward_only,
-                layer_name=layer,
-                batch_size=batch_size,
-                random_seed=args.random_seed + i
-                if args.random_seed
-                else args.random_seed,
-                **layer_config,
-            )
-        except RuntimeError:
-            runtime, memory_stats = float("nan"), {}
-
+        runtime, memory_stats = run_layer_benchmark(
+            num_repeats=args.num_repeats,
+            forward_only=args.forward_only,
+            layer_name=layer,
+            batch_size=batch_size,
+            random_seed=args.random_seed + i if args.random_seed else args.random_seed,
+            **layer_config,
+        )
         res = {"runtime": runtime, "memory_stats": memory_stats}
         results.append(res)
         logger.info(res)
@@ -102,7 +96,7 @@ if __name__ == "__main__":
     parser.add_argument("--layers", choices=layers, default=layers, nargs="+")
     parser.add_argument(
         "--batch_sizes",
-        default=[16, 32, 64, 128, 256, 512, 1024, 2048],
+        default=[16, 32, 64, 128, 256, 512],
         nargs="+",
         type=int,
     )

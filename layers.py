@@ -144,6 +144,9 @@ class LayerFactory:
         def module(self):
             return self._module
 
+        def __del__(self):
+            self.to(torch.device("cpu"))
+
     class LinearBase(Layer):
         def __init__(
             self,
