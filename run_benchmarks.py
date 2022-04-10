@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def run_and_save_benchmark(
     layer: LayerType, batch_size: int, args, layer_config: Dict[str, Any]
 ) -> None:
-    """Runs and saves (if desired) the benchmark for this layer and batch size.
+    """Runs and saves (if desired) the benchmark for the given layer and batch size.
 
     Args:
         layer: the layer to run benchmarks for

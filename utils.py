@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 
 import torch
 
+from layers import LayerType
+
 
 Memory = namedtuple("Memory", "prev_max_mem, cur_mem")
 
@@ -60,7 +62,7 @@ def get_layer_set(layer: str) -> str:
 
 
 def get_path(
-    layer: str,
+    layer: LayerType,
     batch_size: int,
     num_runs: int,
     num_repeats: int,
@@ -69,7 +71,7 @@ def get_path(
     root: str = "./results/raw/",
 ) -> str:
     """Gets the path to the file where the corresponding results are located.
-    File is presumed to be pickle file.
+    File is presumed to be a pickle file.
 
     Args:
         layer: full layer name
@@ -90,11 +92,11 @@ def get_path(
 
 
 def save_results(
-    layer: str,
+    layer: LayerType,
     batch_size: int,
     num_runs: int,
     num_repeats: int,
-    results: List[Dict[str, float]],
+    results: List[Dict[str, Any]],
     config: Dict[str, Any],
     random_seed: Optional[int] = None,
     forward_only: bool = False,

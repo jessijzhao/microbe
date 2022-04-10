@@ -73,8 +73,8 @@ class LayerFactory:
 
             Returns:
                 device's CUDA memory difference between the sum of the values in the
-                stats dict and the current allocated CUDA memory if given CUDA device.
-                0 if given CPU device.
+                stats dict and the current allocated CUDA memory if given a CUDA
+                device. 0 if given a CPU device.
             """
             if device.type == "cuda":
                 return torch.cuda.memory_allocated(device) - sum(stats.values())

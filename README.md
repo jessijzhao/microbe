@@ -1,16 +1,23 @@
 # microbe
 
-A set of **microbe**nchmarks that compares [Opacus](https://github.com/pytorch/opacus) layers (both [basic modules](https://github.com/pytorch/opacus/tree/main/opacus/grad_sample) and [more complex layers](https://github.com/pytorch/opacus/tree/main/opacus/layers)) to their respective [torch.nn](https://pytorch.org/docs/stable/nn.html) counterparts.
+A set of **microbe**nchmarks for [Opacus](https://opacus.ai), a library that enables training PyTorch models with differential privacy.
+
+These microbenchmarks measure runtime and memory for both [basic modules](https://github.com/pytorch/opacus/tree/main/opacus/grad_sample) and [more complex layers](https://github.com/pytorch/opacus/tree/main/opacus/layers), as well as their respective [torch.nn](https://pytorch.org/docs/stable/nn.html) counterparts.
+
 
 ## Contents
 
-- [run_benchmarks.py](run_benchmarks.py) runs all benchmarks in a given config file and writes out the results as pickle files to results/raw
+- [run_benchmarks.py](run_benchmarks.py) runs a list of benchmarks based on the given config file and writes out the results as pickle files to `results/raw` (by default)
 
-- [config.json](config.json) contains an example JSON config to run benchmarks with
+- [benchmark_layer.py](benchmark_layer.py) benchmarks a single layer at the given batch size for both runtime and memory
 
-- [layers.py](layers.py) implements each layer, its input, and the forward/backward pass for each layer
+- [config.json](config.json) contains an example JSON config for running benchmarks
 
-- [results](results) contains notebooks for analyzing and plotting the benchmarking results
+- [layers.py](layers.py) implements each layer with its corresponding inputs/outputs, moving each component to device, and collecting respective memory statistics
+
+- [utils.py](utils.py) implements helper functions, e.g. for saving results as pickle files
+
+- [tests](tests) contains tests for each individual function
 
 
 ## Benchmarks
@@ -19,23 +26,23 @@ For each layer and batch size in [config.json](config.json), [run_benchmarks.py]
 ```
 Do this num_runs times:
     Init layer, one batch of random input, one batch of random "labels"
+    Move each component to GPU and collect its allocated CUDA memory (if applicable)
 
-    Reset memory statistics
     Start timer
 
     Do this num_repeats times:
         preds = layer(input)
-        loss = self.criterion(preds, self.labels)
+        loss = criterion(preds, labels)
         loss.backward()
 
     Stop timer
-
-    Return elapsed time / num_repeats and maximum allocated memory
+    
+    Return elapsed time / num_repeats and memory statistics
 ```
 
 ## Layers
 
-All layers including Opacus layers follow `torch.nn`'s interface with the same default values if not specified in [config.json](config.json).
+All layers, including Opacus's custom layers, follow the corresponding `torch.nn` module's interface with the same default values (if not specified in [config.json](config.json)).
 
 A note on `input_shape` in [config.json](config.json): parameters that are shared between the model and the input are listed separately. Therefore, the actual input shape will vary:
 
@@ -67,27 +74,46 @@ A note on `input_shape` in [config.json](config.json): parameters that are share
 If saving results, ensure that `results/raw` directory exists.
 
 ```
-usage: run_benchmarks.py [-h] [-c CONFIG_FILE] [-v] [--num_runs NUM_RUNS]
-                         [--num_repeats NUM_REPEATS] [--cont]
-                         [--batch_sizes BATCH_SIZES [BATCH_SIZES ...]]
+usage: run_benchmarks.py [-h]
                          [--layers {linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} [{linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} ...]]
-                         [--forward_only] [--no_save]
+                         [--batch_sizes BATCH_SIZES [BATCH_SIZES ...]]
+                         [--num_runs NUM_RUNS]
+                         [--num_repeats NUM_REPEATS]
+                         [--forward_only]
+                         [--random_seed RANDOM_SEED]
+                         [-c CONFIG_FILE] [--cont] [--no_save]
+                         [-v]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c CONFIG_FILE, --config_file CONFIG_FILE
-  -v, --verbose
+  --layers {linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} [{linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} ...]
+  --batch_sizes BATCH_SIZES [BATCH_SIZES ...]
   --num_runs NUM_RUNS   number of benchmarking runs
   --num_repeats NUM_REPEATS
                         how many forward/backward passes per run
+  --forward_only        only run forward passes
+  --random_seed RANDOM_SEED
+                        random seed for the first run of each
+                        layer, subsequent runs increase the
+                        random seed by 1
+  -c CONFIG_FILE, --config_file CONFIG_FILE
   --cont                only run missing experiments
-  --batch_sizes BATCH_SIZES [BATCH_SIZES ...]
-  --layers {linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} [{linear,gsm_linear,conv,gsm_conv,layernorm,gsm_layernorm,instancenorm,gsm_instancenorm,groupnorm,gsm_groupnorm,embedding,gsm_embedding,mha,dpmha,gsm_dpmha,rnn,dprnn,gsm_dprnn,gru,dpgru,gsm_dpgru,lstm,dplstm,gsm_dplstm} ...]
-  --forward_only
   --no_save
+  -v, --verbose
 ```
 
+`run_benchmarks.py` will replicate the results in the [technical report introducing Opacus](https://arxiv.org/abs/2109.12298), which you can cite as follows:
+```
+@article{opacus,
+  title={Opacus: {U}ser-Friendly Differential Privacy Library in {PyTorch}},
+  author={Ashkan Yousefpour and Igor Shilov and Alexandre Sablayrolles and Davide Testuggine and Karthik Prasad and Mani Malek and John Nguyen and Sayan Ghosh and Akash Bharadwaj and Jessica Zhao and Graham Cormode and Ilya Mironov},
+  journal={arXiv preprint arXiv:2109.12298},
+  year={2021}
+}
+```
 
 ## Tests
 
 ```python -m pytest tests/```
+
+Tests for CUDA memory benchmarking will be skipped on CPU.
