@@ -6,6 +6,8 @@ These microbenchmarks measure runtime and memory for both [basic modules](https:
 
 Requires PyTorch version >= 1.10.0.
 
+:minibus: **As of 5/3/2022, the source of truth for this repo has moved under Opacus. You can find the microbenchmarks [here](https://github.com/pytorch/opacus/tree/main/benchmarks).**
+
 ## Contents
 
 - [run_benchmarks.py](run_benchmarks.py) runs a list of benchmarks based on the given config file and writes out the results as pickle files to `results/raw` (by default)
